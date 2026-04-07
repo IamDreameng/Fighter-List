@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fighter List | Powered by REST ROUND™</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { font-family: 'Montserrat', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .selection-brand::selection { background: #d7df22; color: black; }
+        @keyframes slideIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-slide-up { animation: slideIn 0.3s ease-out; }
+    </style>
+</head>
+<body class="bg-white text-black selection-brand">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- DATA ---
+        const INITIAL_MEMBERS = [
+            { id: "m1", name: "Alex Volkanovski", status: "Pro", handle: "@volk", image: "https://i.pravatar.cc/150?u=volk", history: ["Bangtao Muay Thai", "City Kickboxing"] },
+            { id: "m2", name: "John Smith", status: "Hobbyist", handle: "@jsmith", image: "https://i.pravatar.cc/150?u=jsmith", history: ["B-Team Jiu Jitsu"] },
+            { id: "m3", name: "Sarah Lee", status: "Amateur", handle: "@sarah", image: "https://i.pravatar.cc/150?u=sarah", history: ["AKA Thailand"] },
+            { id: "m4", name: "Petr Yan", status: "Pro", handle: "@petr", image: "https://i.pravatar.cc/150?u=petr", history: ["Tiger Muay Thai"] }
+        ];
+
+        const INITIAL_CAMPS = [
+            { id: "1", name: "Bangtao Muay Thai & MMA", city: "Phuket", location: "Bangtao, Thailand", stars: 5.0, gymCost: 500, temp: 32, date: "Est. 2021", website: "https://bangtaomma.com", disciplines: ["MMA", "Muay Thai", "BJJ"], metrics: { hygiene: 98, likedByMembers: 98, communityScore: 95, foodSafety: 90, safeForWomen: 96, englishSpeaking: 100, cost: 85 }, attendees: { now: ["m1", "m2"], wasHere: ["m3", "m4"], comingSoon: ["m3"] }, image: "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=800" },
+            { id: "2", name: "Tiger Muay Thai", city: "Phuket", location: "Chalong, Thailand", stars: 4.8, gymCost: 450, temp: 33, date: "LegendaryStatus", website: "https://tigermuaythai.com", disciplines: ["Muay Thai", "MMA"], metrics: { hygiene: 75, likedByMembers: 82, communityScore: 98, foodSafety: 85, safeForWomen: 80, englishSpeaking: 100, cost: 70 }, attendees: { now: ["m4"], wasHere: ["m1"], comingSoon: ["m2"] }, image: "https://images.unsplash.com/photo-1517438476312-10d79c077509?auto=format&fit=crop&q=80&w=800" },
+            { id: "3", name: "AKA Thailand", city: "Phuket", location: "Rawai, Thailand", stars: 4.7, gymCost: 400, temp: 31, date: "Luxury", website: "https://akathailand.com", disciplines: ["MMA", "Muay Thai"], metrics: { hygiene: 92, likedByMembers: 90, communityScore: 88, foodSafety: 94, safeForWomen: 95, englishSpeaking: 100, cost: 60 }, attendees: { now: ["m3"], wasHere: [], comingSoon: ["m1"] }, image: "https://images.unsplash.com/photo-1599058917232-d750c8259424?auto=format&fit=crop&q=80&w=800" }
+        ];
+
+        const FIGHTS_DATA = [
+            { id: 1, event: "ADCC PHUKET OPEN", city: "Phuket", date: "MAY 20", type: "BJJ", status: "OPEN", contact: "events@smoothcomp.com" },
+            { id: 2, event: "ROAD TO ONE", city: "Bangkok", date: "JUN 12", type: "Muay Thai", status: "TICKETS", recruiting: "LOOKING FOR 65KG MALE MMA FIGHTER", contact: "+66 92 469 2066" },
+            { id: 3, event: "BANGLA STADIUM NIGHT", city: "Phuket", date: "EVERY WED", type: "Muay Thai", status: "OPEN", recruiting: "LOOKING FOR 65KG MALE MMA FIGHTER", contact: "+66 92 469 2066" },
+            { id: 4, event: "ONE FRIDAY FIGHTS", city: "Bangkok", date: "APR 24", type: "Muay Thai", status: "LUMPINEE TICKETS", contact: "tickets@onefc.com" }
+        ];
+
+        const GEAR_DATA = [
+            { id: 1, brand: "REST ROUND™", product: "HOCL Skin Spray", discount: "20% OFF", code: "LIST20", url: "https://restround.co" },
+            { id: 2, brand: "VENUM", product: "Elite Gloves", discount: "15% OFF", code: "VENUM15", url: "#" },
+            { id: 3, brand: "FAIRTEX", product: "MT Shorts", discount: "10% OFF", code: "FAIR10", url: "#" }
+        ];
+
+        const SPONSOR_DATA = [
+            { id: 1, brand: "REST ROUND™", focus: "Official Hygiene", offer: "Product Kit + Travel Stipend", requirements: "Active Pro Athlete, 5k+ Social Reach", email: "sponsors@restround.co" },
+            { id: 2, brand: "ALPHA NUTRITION", focus: "Performance", offer: "Supplement Kit + Affiliate %", requirements: "Active Social Media Presence", email: "team@alphanutrition.com" },
+            { id: 3, brand: "GUARD LAB", focus: "Protection", offer: "Custom Mouthguards for Teams", requirements: "Amateur or Pro Competitor", email: "support@guardlab.com" }
+        ];
+
+        // --- COMPONENTS ---
+
+        const Icon = ({ name, size = 16, className = "" }) => {
+            useEffect(() => { lucide.createIcons(); }, []);
+            return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
+        };
+
+        const MetricBar = ({ label, value, icon, small = false }) => (
+            <div className={small ? "space-y-0.5" : "space-y-1.5"}>
+                <div className={`flex justify-between items-center font-black uppercase tracking-widest text-gray-500 ${small ? 'text-[7px]' : 'text-[10px]'}`}>
+                    <div className="flex items-center gap-1.5"><Icon name={icon} size={small ? 8 : 12} />{label}</div>
+                    <span>{value}%</span>
+                </div>
+                <div className={`${small ? 'h-1' : 'h-1.5'} w-full bg-gray-100 rounded-full overflow-hidden`}>
+                    <div className={`h-full ${label === 'Hygiene' ? 'bg-[#d7df22]' : 'bg-black'} transition-all duration-1000`} style={{ width: `${value}%` }} />
+                </div>
+            </div>
+        );
+
+        const AttendeeRow = ({ title, memberIds, onMemberClick }) => (
+            <div className="space-y-3 text-left">
+                <h5 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">{title}</h5>
+                <div className="flex flex-wrap gap-3">
+                    {memberIds.length > 0 ? memberIds.map(id => {
+                        const m = INITIAL_MEMBERS.find(mem => mem.id === id);
+                        return m ? (
+                            <button key={id} onClick={() => onMemberClick(m)} className="w-16 h-16 rounded-full border-2 border-white shadow-md overflow-hidden active:scale-95 transition-all">
+                                <img src={m.image} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-300" alt={m.name} />
+                            </button>
+                        ) : null;
+                    }) : <span className="text-[10px] text-gray-300 italic">None</span>}
+                </div>
+            </div>
+        );
+
+        const RegisterTease = ({ onRegister }) => (
+            <div className="bg-white rounded-[2rem] p-6 text-center flex flex-col justify-between shadow-xl border-2 border-gray-100 group h-full w-full">
+                <div className="flex flex-col items-center justify-center flex-1 space-y-4 py-6">
+                    <Icon name="lock" size={40} className="text-black mb-2" />
+                    <div className="space-y-1">
+                        <h4 className="text-xl font-black italic uppercase text-black leading-tight">Register to see more</h4>
+                        <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-loose">Unlock 20+ elite gear codes and direct sponsorship links</p>
+                    </div>
+                </div>
+                <button 
+                    onClick={onRegister}
+                    className="bg-black text-[#d7df22] px-8 py-4 rounded-2xl font-black uppercase italic text-xs tracking-widest shadow-lg active:scale-95 transition-all hover:bg-gray-800 relative z-10 w-full"
+                >
+                    Register
+                </button>
+            </div>
+        );
+
+        const App = () => {
+            const [view, setView] = useState("gyms");
+            const [activeCity, setActiveCity] = useState("Where");
+            const [activeType, setActiveType] = useState("All");
+            const [selectedGym, setSelectedGym] = useState(null);
+            const [selectedMember, setSelectedMember] = useState(null);
+            const [showProfile, setShowProfile] = useState(false);
+            const [visibleEmailId, setVisibleEmailId] = useState(null);
+            const [visibleContactId, setVisibleContactId] = useState(null);
+            const [copiedId, setCopiedId] = useState(null);
+
+            const copyToClipboard = (text, id) => {
+                const el = document.body.appendChild(document.createElement('textarea'));
+                el.value = text; el.select(); document.execCommand('copy'); document.body.removeChild(el);
+                setCopiedId(id);
+                setTimeout(() => setCopiedId(null), 2000);
+            };
+
+            const renderView = () => {
+                if (view === 'gyms') return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {INITIAL_CAMPS.filter(g => (activeCity === "Where" || g.city === activeCity) && (activeType === "All" || g.disciplines.includes(activeType))).map(gym => (
+                            <div key={gym.id} className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-xl cursor-pointer hover:shadow-2xl transition-all" onClick={() => setSelectedGym(gym)}>
+                                <div className="relative h-48 overflow-hidden">
+                                    <img src={gym.image} className="w-full h-full object-cover" />
+                                    <div className="absolute top-4 left-4 flex gap-1">{gym.disciplines.map(d => <span key={d} className="bg-black text-[#d7df22] text-[8px] font-black px-2 py-0.5 rounded uppercase">{d}</span>)}</div>
+                                    <div className="absolute bottom-4 left-4 bg-black/80 text-white text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest">${gym.gymCost} / mo</div>
+                                </div>
+                                <div className="p-6 text-left">
+                                    <div className="flex items-center gap-1 text-red-500 text-[10px] font-black uppercase mb-1"><Icon name="map-pin" size={12} /> {gym.location}</div>
+                                    <h3 className="text-lg font-black italic uppercase leading-none">{gym.name}</h3>
+                                    <div className="grid grid-cols-3 gap-1 py-4 border-y border-gray-50 mt-4">
+                                        <div className="text-left border-r pr-1">
+                                            <span className="text-[7px] font-black text-gray-400 uppercase block mb-1">Here Now</span>
+                                            <div className="flex -space-x-1.5">{gym.attendees.now.map(id => <img key={id} src={INITIAL_MEMBERS.find(m=>m.id===id)?.image} className="w-5 h-5 rounded-full border border-white" />)}</div>
+                                        </div>
+                                        <div className="text-left border-r px-1">
+                                            <span className="text-[7px] font-black text-gray-400 uppercase block mb-1">Was Here</span>
+                                            <div className="flex -space-x-1.5">{gym.attendees.wasHere.length > 0 ? gym.attendees.wasHere.slice(0,3).map(id => <img key={id} src={INITIAL_MEMBERS.find(m=>m.id===id)?.image} className="w-5 h-5 rounded-full border border-white" />) : "-"}</div>
+                                        </div>
+                                        <div className="text-right pl-1">
+                                            <span className="text-[7px] font-black text-gray-400 uppercase block mb-1">Visit Soon</span>
+                                            <div className="flex -space-x-1.5 justify-end">{gym.attendees.comingSoon.length > 0 ? gym.attendees.comingSoon.map(id => <img key={id} src={INITIAL_MEMBERS.find(m=>m.id===id)?.image} className="w-5 h-5 rounded-full border border-white" />) : "-"}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center mt-4">
+                                        <div className="flex items-center gap-1 font-black text-sm"><Icon name="thermometer" size={14} className="text-orange-500" />{gym.temp}°C</div>
+                                        <span className="bg-black text-[#d7df22] px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest">Website</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+                if (view === 'fights') return (
+                    <div className="max-w-4xl mx-auto space-y-4">
+                        <h2 className="text-3xl font-black italic uppercase tracking-tighter mb-8 text-left text-black">ELITE EVENTS</h2>
+                        {FIGHTS_DATA.filter(f => (activeCity === "Where" || f.city === activeCity) && (activeType === "All" || f.type === activeType)).map(f => (
+                            <div key={f.id} className="bg-white border-2 border-black p-6 rounded-[2rem] flex items-center justify-between shadow-xl text-left text-black">
+                                <div className="flex items-center gap-6 text-left">
+                                    <div className="bg-gray-50 p-3 rounded-2xl text-center min-w-[80px]">
+                                        <p className="text-[10px] font-black text-gray-300 uppercase leading-none">{f.date.split(' ')[0]}</p>
+                                        <p className="text-xl font-black italic">{f.date.split(' ')[1] || ""}</p>
+                                    </div>
+                                    <div className="text-left">
+                                        <span className="bg-[#d7df22] text-black px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">{f.type}</span>
+                                        <h3 className="text-xl font-black italic uppercase mt-1 leading-tight">{f.event}</h3>
+                                        <p className="text-gray-400 font-bold uppercase text-[10px] flex items-center gap-1 text-left"><Icon name="map-pin" size={12} className="text-red-500" /> {f.city}</p>
+                                        {f.recruiting && <p className="text-red-600 font-black uppercase text-[10px] mt-2 italic tracking-widest border-l-2 border-red-600 pl-3">{f.recruiting}</p>}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {visibleContactId === f.id ? (
+                                        <div className="flex items-center gap-2 bg-gray-100 rounded-full pl-6 pr-1 py-1 animate-in slide-in-from-right-4 duration-200">
+                                            <span className="text-[10px] font-bold lowercase font-mono">{f.contact}</span>
+                                            <button onClick={() => copyToClipboard(f.contact, f.id)} className={`p-2.5 rounded-full transition-all ${copiedId === f.id ? 'bg-green-500 text-white' : 'bg-black text-[#d7df22]'}`}><Icon name={copiedId === f.id ? "check" : "copy"} size={14} /></button>
+                                        </div>
+                                    ) : (
+                                        <button onClick={() => setVisibleContactId(f.id)} className="bg-black text-white px-6 py-2.5 rounded-full font-black uppercase text-[10px] hover:bg-[#d7df22] hover:text-black transition-all min-w-[100px]">Contact</button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                );
+
+                if (view === 'gear') return (
+                    <div className="space-y-10 text-left">
+                        <h2 className="text-4xl font-black italic uppercase tracking-tighter text-black">COMMUNITY PERKS</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                            {GEAR_DATA.map(i => (
+                                <div key={i.id} className="bg-white border-2 border-gray-100 p-6 rounded-[2rem] shadow-xl flex flex-col justify-between group hover:border-black transition-all h-full text-black">
+                                    <div>
+                                        <span className="bg-black text-[#d7df22] px-2 py-1 rounded-full text-[8px] font-black uppercase mb-4 inline-block">{i.discount}</span>
+                                        <p className="text-[8px] font-black text-gray-400 uppercase mb-1">{i.brand}</p>
+                                        <h4 className="text-md font-black italic uppercase mb-4 leading-tight">{i.product}</h4>
+                                        <div className="bg-gray-50 p-2 rounded-xl border border-dashed flex justify-between items-center mb-4 font-mono font-black text-xs">{i.code}</div>
+                                    </div>
+                                    <a href={i.url} target="_blank" className="block w-full bg-black text-[#d7df22] py-4 rounded-2xl text-center font-black uppercase text-[8px] tracking-widest mt-auto">Shop Now</a>
+                                </div>
+                            ))}
+                            <RegisterTease onRegister={() => setShowProfile(true)} />
+                        </div>
+                    </div>
+                );
+
+                if (view === 'sponsors') return (
+                    <div className="space-y-10 text-left">
+                        <h2 className="text-5xl font-black italic uppercase tracking-tighter text-left text-black">ELITE SPONSORS</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch">
+                            {SPONSOR_DATA.map(brand => (
+                                <div key={brand.id} className="bg-white border-2 border-gray-100 p-6 rounded-[2rem] shadow-xl flex flex-col justify-between group hover:border-black transition-all h-full text-black">
+                                    <div>
+                                        <h3 className="text-xl font-black italic uppercase mb-1 leading-none">{brand.brand}</h3>
+                                        <p className="text-[#d7df22] font-black uppercase text-[8px] tracking-[0.2em] bg-black inline-block px-1.5 mb-6">{brand.focus}</p>
+                                        <div className="space-y-3">
+                                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100"><p className="text-[8px] font-black text-gray-400 uppercase mb-1">Requirement</p><p className="text-[10px] font-bold leading-tight">{brand.requirements}</p></div>
+                                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100"><p className="text-[8px] font-black text-gray-400 uppercase mb-1">Offer</p><p className="text-[10px] font-bold leading-tight">{brand.offer}</p></div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setVisibleEmailId(visibleEmailId === brand.id ? null : brand.id)} className="mt-8 w-full py-4 rounded-2xl font-black uppercase italic tracking-widest text-[10px] bg-black text-white hover:bg-[#d7df22] hover:text-black transition-all mt-auto">
+                                        {visibleEmailId === brand.id ? brand.email : "Reveal Email"}
+                                    </button>
+                                </div>
+                            ))}
+                            <RegisterTease onRegister={() => setShowProfile(true)} />
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="min-h-screen bg-white pb-20 text-black">
+                    {/* NAV */}
+                    <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 px-4 md:px-6 h-16 flex items-center justify-between">
+                        <div className="cursor-pointer" onClick={() => setView('gyms')}>
+                            <span className="text-xl md:text-2xl font-black italic uppercase tracking-tighter">FIGHTER LIST</span>
+                        </div>
+                        <div className="flex gap-1 md:gap-2 bg-gray-50 p-1 rounded-full shadow-inner">
+                            {[
+                                {id:'gyms', label:'Gyms', icon:'map-pin'}, 
+                                {id:'fights', label:'Fights', icon:'swords'}, 
+                                {id:'gear', label:'Gear', icon:'shopping-bag'}, 
+                                {id:'sponsors', label:'Sponsors', icon:'target'}
+                            ].map(item => (
+                                <button key={item.id} onClick={() => {setView(item.id); setVisibleContactId(null); setVisibleEmailId(null);}} className={`flex items-center gap-2 px-3 md:px-5 py-2 rounded-full text-[9px] md:text-[10px] font-black uppercase transition-all ${view === item.id ? 'bg-black text-[#d7df22] shadow-lg' : 'text-gray-400'}`}>
+                                    <Icon name={item.icon} size={14} /> <span className="hidden sm:inline">{item.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <button onClick={() => setShowProfile(true)} className="p-2.5 rounded-full border bg-gray-50"><Icon name="user" size={18} /></button>
+                    </nav>
+
+                    {/* FILTERS */}
+                    {(view === 'gyms' || view === 'fights') && (
+                        <div className="bg-white border-b border-gray-100 py-4 md:py-6 sticky top-16 z-40 px-4 md:px-6 space-y-4 shadow-sm text-left">
+                            <div className="max-w-7xl mx-auto space-y-4 text-left">
+                                <div className="flex items-center gap-3 text-black"><Icon name="globe" /><div className="flex gap-2 overflow-x-auto no-scrollbar text-left">{["Where", "Phuket", "Bangkok", "Austin"].map(city => (<button key={city} onClick={() => setActiveCity(city)} className={`whitespace-nowrap px-4 py-2 rounded-xl text-[9px] font-black uppercase border transition-all ${activeCity === city ? 'bg-black text-[#d7df22] border-black shadow-lg' : 'text-gray-400 border-gray-100 bg-white'}`}>{city}</button>))}</div></div>
+                                <div className="flex items-center gap-3 text-black"><Icon name="layout-grid" /><div className="flex gap-2 overflow-x-auto no-scrollbar text-left">{["All", "MMA", "Muay Thai", "BJJ", "Open Mat"].map(type => (<button key={type} onClick={() => setActiveType(type)} className={`whitespace-nowrap px-4 py-2 rounded-xl text-[9px] font-black uppercase border transition-all ${activeType === type ? 'bg-[#d7df22] text-black border-black shadow-lg' : 'text-gray-400 border-gray-100 bg-white'}`}>{type}</button>))}</div></div>
+                            </div>
+                        </div>
+                    )}
+
+                    <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">{renderView()}</main>
+
+                    {/* GYM DETAIL OVERLAY */}
+                    {selectedGym && (
+                        <div className="fixed inset-0 z-[150] flex items-end md:items-center justify-center p-0 md:p-8">
+                            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setSelectedGym(null)} />
+                            <div className="relative bg-white w-full max-w-5xl h-[92vh] md:h-full md:max-h-[90vh] rounded-t-[3rem] md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col md:flex-row animate-slide-up text-left">
+                                <div className="md:w-2/5 relative h-64 md:h-auto shrink-0">
+                                    <img src={selectedGym.image} className="w-full h-full object-cover" />
+                                    <button onClick={() => setSelectedGym(null)} className="absolute top-6 right-6 bg-black/50 text-white p-2.5 rounded-full"><Icon name="x" size={24} /></button>
+                                </div>
+                                <div className="md:w-3/5 p-8 md:p-12 overflow-y-auto no-scrollbar space-y-8 text-black">
+                                    <div>
+                                        <h2 className="text-3xl md:text-4xl font-black italic uppercase leading-none">{selectedGym.name}</h2>
+                                        <div className="flex items-center gap-4 text-gray-500 font-bold uppercase text-[9px] tracking-widest mt-3">
+                                            <div className="flex items-center gap-1.5"><Icon name="map-pin" size={14} className="text-red-500" /> {selectedGym.location}</div>
+                                            <span className="bg-gray-100 px-2 py-1 rounded">{selectedGym.date}</span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-[#d7df22]/5 border-2 border-[#d7df22]/20 p-6 rounded-[2rem] space-y-8 text-left">
+                                        <div className="flex items-center gap-2 text-black font-black text-xs uppercase tracking-widest text-left"><Icon name="users" size={16} /> Community</div>
+                                        <AttendeeRow title="here now" memberIds={selectedGym.attendees.now} onMemberClick={setSelectedMember} />
+                                        <AttendeeRow title="was here" memberIds={selectedGym.attendees.wasHere} onMemberClick={setSelectedMember} />
+                                        <AttendeeRow title="visit soon" memberIds={selectedGym.attendees.comingSoon} onMemberClick={setSelectedMember} />
+                                    </div>
+                                    <div className="bg-gray-50/50 p-6 rounded-[2rem] border border-gray-100 space-y-5 text-black">
+                                        <h4 className="text-[9px] font-black uppercase tracking-widest text-gray-400">Community Vitals</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                            <MetricBar label="Hygiene" value={selectedGym.metrics.hygiene} icon="shield-check" small={true} />
+                                            <MetricBar label="Liked by Members" value={selectedGym.metrics.likedByMembers} icon="heart" small={true} />
+                                            <MetricBar label="Community Score" value={selectedGym.metrics.communityScore} icon="users" small={true} />
+                                            <MetricBar label="Food Safety" value={selectedGym.metrics.foodSafety} icon="utensils" small={true} />
+                                            <MetricBar label="English Speaking" value={selectedGym.metrics.englishSpeaking} icon="languages" small={true} />
+                                            <MetricBar label="Safe for Women" value={selectedGym.metrics.safeForWomen} icon="venus" small={true} />
+                                        </div>
+                                    </div>
+                                    <a href={selectedGym.website} target="_blank" className="block w-full bg-black text-[#d7df22] py-5 rounded-[1.5rem] font-black uppercase italic tracking-widest text-center shadow-xl">Visit Gym Website</a>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MEMBER DETAIL OVERLAY */}
+                    {selectedMember && (
+                        <div className="fixed inset-0 z-[160] flex items-end md:items-center justify-center p-0 md:p-4 text-left text-black">
+                            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setSelectedMember(null)} />
+                            <div className="relative bg-white w-full max-w-lg rounded-t-[2.5rem] md:rounded-[3rem] overflow-hidden shadow-2xl animate-slide-up text-black">
+                                <div className="bg-black p-8 text-center text-white shrink-0">
+                                    <button onClick={() => setSelectedMember(null)} className="absolute top-6 right-6 text-white/50 hover:text-white"><Icon name="x" size={24} /></button>
+                                    <img src={selectedMember.image} className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-[#d7df22] mx-auto mb-4 object-cover shadow-2xl" alt={selectedMember.name} />
+                                    <h3 className="text-2xl md:text-3xl font-black italic uppercase leading-tight text-white">{selectedMember.name}</h3>
+                                    <p className="text-[#d7df22] font-black text-[10px] mt-2 uppercase tracking-widest leading-none bg-white/10 px-4 py-1.5 rounded-full inline-block">{selectedMember.handle}</p>
+                                </div>
+                                <div className="p-8 space-y-6 text-center bg-white text-black">
+                                    <div className="space-y-4 text-black text-center">
+                                        <div className="flex items-center justify-center gap-2 border-b border-gray-100 pb-2 text-black"><Icon name="trophy" className="text-gray-400" /><h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Athlete Passport</h4></div>
+                                        <div className="flex flex-wrap justify-center gap-2 text-black">
+                                            {selectedMember.history.map(gym => (
+                                            <div key={gym} className="bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-xl text-[10px] font-bold text-gray-600 flex items-center gap-2 text-black">
+                                                <Icon name="map-pin" size={12} className="text-[#d7df22]" /> {gym}
+                                            </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4 text-black">
+                                        <button className="flex-1 bg-gray-50 py-4 rounded-2xl flex items-center justify-center hover:bg-black hover:text-white transition-all"><Icon name="instagram" size={20} /></button>
+                                        <button className="flex-1 bg-gray-50 py-4 rounded-2xl flex items-center justify-center hover:bg-black hover:text-white transition-all"><Icon name="twitter" size={20} /></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PROFILE DRAWER */}
+                    {showProfile && (
+                        <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center p-0 md:p-8 text-black">
+                            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowProfile(false)} />
+                            <div className="relative bg-white w-full max-w-2xl h-[92vh] md:h-auto rounded-t-[3rem] md:rounded-[3rem] overflow-hidden flex flex-col text-left animate-slide-up shadow-2xl text-black">
+                                <div className="bg-black p-10 text-center text-white">
+                                    <button onClick={() => setShowProfile(false)} className="absolute top-6 right-6 text-white/50 hover:text-white"><Icon name="x" size={24} /></button>
+                                    <div className="w-24 h-24 rounded-full border-4 border-[#d7df22] mx-auto mb-4 bg-gray-900 overflow-hidden"><img src="https://i.pravatar.cc/150?u=guest" className="w-full h-full object-cover" /></div>
+                                    <h2 className="text-2xl font-black italic uppercase leading-none text-white">Guest Athlete</h2>
+                                    <p className="text-[#d7df22] font-black text-[10px] mt-2 uppercase tracking-widest leading-none">@guest</p>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-10 space-y-10 no-scrollbar text-black text-left">
+                                    <div className="space-y-4 text-left">
+                                        <div className="flex items-center gap-2 text-gray-400 font-black text-[9px] uppercase tracking-widest border-b pb-2 text-left text-black"><Icon name="home" className="text-[#d7df22]" /> Home Base</div>
+                                        <div className="bg-black p-6 rounded-[2rem] border-2 border-[#d7df22]/30 flex justify-between items-center shadow-xl">
+                                            <div className="text-white text-left text-black"><p className="text-[8px] font-black text-[#d7df22] uppercase mb-1">Bangtao, Thailand</p><h4 className="text-lg font-black uppercase italic leading-none text-left text-white">Bangtao Muay Thai & MMA</h4></div>
+                                            <Icon name="chevron-right" className="bg-[#d7df22] text-black rounded-full p-1" size={20} />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4 text-left">
+                                        <div className="flex items-center gap-2 text-gray-400 font-black text-[9px] uppercase tracking-widest border-b pb-2 text-left text-black"><Icon name="calendar" className="text-orange-500" /> Planned Trips</div>
+                                        <div className="bg-white border-2 border-gray-100 p-6 rounded-3xl flex justify-between items-center shadow-sm text-black">
+                                            <div className="text-left text-black text-black"><p className="text-[8px] font-black text-gray-400 uppercase mb-1">Austin, USA</p><h4 className="text-lg font-black uppercase italic text-left">B-Team Jiu Jitsu</h4><p className="mt-2 text-[10px] font-black text-black bg-white border border-black/10 px-2 py-1 rounded-lg inline-block font-bold">June 12 — June 24, 2026</p></div>
+                                            <Icon name="chevron-right" className="text-[#d7df22]" size={24} />
+                                        </div>
+                                    </div>
+                                    <div className="bg-black rounded-[2rem] p-10 text-center text-white space-y-4 text-black">
+                                        <Icon name="lock" className="mx-auto text-[#d7df22]" size={32} />
+                                        <h4 className="font-black italic uppercase text-lg">Save Profile Forever</h4>
+                                        <p className="text-[10px] uppercase text-gray-400 font-bold tracking-widest leading-loose">Secure athlete registration is coming in our next update!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* REST ROUND BANNER */}
+                    <section className="max-w-7xl mx-auto px-4 md:px-6 py-12 text-left">
+                        <div className="bg-black rounded-[2.5rem] p-8 md:p-12 flex items-center justify-between gap-8 relative overflow-hidden shadow-2xl">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-[#d7df22]/10 rounded-full blur-[100px] opacity-10" />
+                            <div className="flex-1 space-y-4 relative z-10 text-white text-left">
+                                <div className="flex items-center gap-2 text-[#d7df22] font-black text-[10px] uppercase tracking-widest"><Icon name="shield-check" /> Official Partner</div>
+                                <h2 className="text-3xl md:text-5xl font-black italic uppercase leading-none tracking-tighter">REST ROUND™</h2>
+                                <div className="space-y-1">
+                                    <p className="text-[#d7df22] font-black text-xs md:text-sm uppercase tracking-widest">High-Performance Hygiene & Recovery.</p>
+                                    <p className="text-gray-400 text-xs md:text-sm font-medium uppercase italic">Engineered for Combat Athletes.</p>
+                                </div>
+                                <a href="https://restround.co" target="_blank" className="inline-block bg-[#d7df22] text-black px-8 py-3 rounded-full font-black italic uppercase text-sm hover:bg-white transition-all shadow-xl active:scale-95">Buy Now</a>
+                            </div>
+                            <div className="relative z-10 hidden sm:block">
+                                <div className="w-32 h-44 bg-white border-[8px] border-[#d7df22] rounded-[1.5rem] flex items-center justify-center transform rotate-6 shadow-2xl"><span className="text-black font-black text-5xl italic tracking-tighter leading-none">RR</span></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* MINIMAL GREY FOOTER */}
+                    <footer className="bg-white py-16 border-t border-gray-100 text-gray-400 text-left">
+                        <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col items-center gap-10">
+                            {/* SIMPLE TEXT LIST */}
+                            <div className="flex flex-col gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-center">
+                                <p>INSTAGRAM: @FIGHTERLIST_COM</p>
+                                <p>WHATSAPP: +66 92 469 2066</p>
+                                <p>EMAIL: TEAM.RESTROUND@GMAIL.COM</p>
+                            </div>
+
+                            {/* LOGO & COPYRIGHT */}
+                            <div className="flex flex-col items-center opacity-30 mt-4">
+                                <p className="text-[10px] font-black uppercase tracking-[0.6em] mb-2">FIGHTER LIST © 2026</p>
+                                <p className="text-[8px] font-black uppercase tracking-[0.3em]">POWERED BY REST ROUND™</p>
+                            </div>
+                        </div>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
