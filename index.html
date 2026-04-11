@@ -459,7 +459,7 @@
                             {view === 'gear' && (
                                 <div className="space-y-10 text-left text-black">
                                     <h2 className="text-4xl font-black italic uppercase tracking-tighter text-black leading-none">GEAR DISCOUNTS</h2>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
                                         {(user ? filteredGear : filteredGear.slice(0, 5)).map((item, i) => (
                                             <div key={i} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all text-black h-full">
                                                 <div>
@@ -474,7 +474,9 @@
                                                 <button onClick={() => window.open(item.affiliate_url)} className="w-full bg-black text-[#d7df22] py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg mt-auto">Get Deal</button>
                                             </div>
                                         ))}
-                                        {!user && filteredGear.length >= 5 && <RegisterCTA title="Unlock More Gear" text="See 20+ hidden combat gear discounts" />}
+                                        {!user && filteredGear.length >= 5 && (
+                                            <div className="h-full"><RegisterCTA title="Unlock More Gear" text="See 20+ hidden combat gear discounts" /></div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -487,7 +489,7 @@
                                         <h2 className="text-4xl md:text-5xl font-black italic uppercase mb-4 tracking-tighter">Sponsors guide</h2>
                                         <p className="max-w-xl font-bold text-sm leading-loose uppercase tracking-widest opacity-80">Sponsorship is a partnership. Connect with brands dedicated to combat athletes.</p>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
                                         {(user ? filteredSponsors : filteredSponsors.slice(0, 5)).map(s => (
                                             <div key={s.id} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all">
                                                 <div>
@@ -510,7 +512,9 @@
                                                 </div>
                                             </div>
                                         ))}
-                                        {!user && filteredSponsors.length >= 5 && <RegisterCTA title="Unlock More Sponsors" text="Connect with brands looking for talent" />}
+                                        {!user && filteredSponsors.length >= 5 && (
+                                            <div className="h-full"><RegisterCTA title="Unlock More Sponsors" text="Connect with brands looking for talent" /></div>
+                                        )}
                                     </div>
                                 </div>
                             )}
