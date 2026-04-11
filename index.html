@@ -108,11 +108,18 @@
             const [sponsors, setSponsors] = useState([]);
             const [profiles, setProfiles] = useState([]);
             
+            // Registration/Login states
             const [email, setEmail] = useState("");
             const [password, setPassword] = useState("");
+            const [confirmPassword, setConfirmPassword] = useState("");
             const [fullName, setFullName] = useState("");
             const [authError, setAuthError] = useState("");
             const [isLogin, setIsLogin] = useState(true);
+
+            // Profile Edit States
+            const [isEditingProfile, setIsEditingProfile] = useState(false);
+            const [editHomeGym, setEditHomeGym] = useState("");
+            const [editPlannedGyms, setEditPlannedGyms] = useState("");
 
             const sortGyms = (data) => {
                 return [...data].sort((a, b) => {
@@ -128,23 +135,24 @@
                 });
             };
 
+            const loadData = async () => {
+                setLoading(true);
+                const [gymRes, fightRes, gearRes, sponsorRes, profileRes] = await Promise.all([
+                    supabase.from('gyms').select('*'),
+                    supabase.from('fights').select('*').order('event_date', { ascending: true }),
+                    supabase.from('gear_discounts').select('*'),
+                    supabase.from('sponsors').select('*'),
+                    supabase.from('profiles').select('*')
+                ]);
+                if (gymRes.data) setGyms(sortGyms(gymRes.data));
+                if (fightRes.data) setFights(fightRes.data);
+                if (gearRes.data) setGear(gearRes.data);
+                if (sponsorRes.data) setSponsors(sponsorRes.data);
+                if (profileRes.data) setProfiles(profileRes.data);
+                setLoading(false);
+            };
+
             useEffect(() => {
-                const loadData = async () => {
-                    setLoading(true);
-                    const [gymRes, fightRes, gearRes, sponsorRes, profileRes] = await Promise.all([
-                        supabase.from('gyms').select('*'),
-                        supabase.from('fights').select('*').order('event_date', { ascending: true }),
-                        supabase.from('gear_discounts').select('*'),
-                        supabase.from('sponsors').select('*'),
-                        supabase.from('profiles').select('*')
-                    ]);
-                    if (gymRes.data) setGyms(sortGyms(gymRes.data));
-                    if (fightRes.data) setFights(fightRes.data);
-                    if (gearRes.data) setGear(gearRes.data);
-                    if (sponsorRes.data) setSponsors(sponsorRes.data);
-                    if (profileRes.data) setProfiles(profileRes.data);
-                    setLoading(false);
-                };
                 loadData();
                 supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
                 const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
@@ -154,28 +162,53 @@
             const handleAuth = async (e) => {
                 e.preventDefault();
                 setAuthError("");
+                
                 if (isLogin) {
                     const { error } = await supabase.auth.signInWithPassword({ email, password });
                     if (error) setAuthError(error.message);
                     else { setShowPassport(true); setView('gyms'); }
                 } else {
+                    // Sign Up Logic with Confirmation
+                    if (password !== confirmPassword) {
+                        setAuthError("Passwords do not match.");
+                        return;
+                    }
+
                     const { data, error } = await supabase.auth.signUp({ 
                         email, 
                         password,
                         options: { data: { full_name: fullName } }
                     });
+                    
                     if (error) setAuthError(error.message);
                     else {
                         if (data.user) {
                             await supabase.from('profiles').insert([{ 
                                 id: data.user.id, 
                                 full_name: fullName || "Athlete", 
-                                username: email.split('@')[0] 
+                                username: email.split('@')[0],
+                                home_gym: "Not Set",
+                                planned_gyms: "None Recorded"
                             }]);
                         }
                         setAuthError("Passport Created! Please check your email to confirm activation.");
                         setIsLogin(true);
                     }
+                }
+            };
+
+            const handleUpdateProfile = async () => {
+                if (!user) return;
+                const { error } = await supabase.from('profiles').update({
+                    home_gym: editHomeGym,
+                    planned_gyms: editPlannedGyms
+                }).eq('id', user.id);
+
+                if (error) {
+                    setAuthError(error.message);
+                } else {
+                    await loadData(); // Refresh profiles
+                    setIsEditingProfile(false);
                 }
             };
 
@@ -222,8 +255,18 @@
             const profile = profiles.find(p => p.id === user?.id) || {
                 full_name: "Guest Athlete",
                 username: "PASSPORT_HOLDER",
-                avatar_url: "https://dmxg5wxfqgb4u.cloudfront.net/styles/athlete_bio_full_body/s3/2023-02/VOLKANOVSKI_ALEXANDER_L_02-11.png"
+                avatar_url: "https://dmxg5wxfqgb4u.cloudfront.net/styles/athlete_bio_full_body/s3/2023-02/VOLKANOVSKI_ALEXANDER_L_02-11.png",
+                home_gym: "Not Set",
+                planned_gyms: "None Recorded"
             };
+
+            // Initialize edit states when profile is found
+            useEffect(() => {
+                if (user && profile) {
+                    setEditHomeGym(profile.home_gym || "");
+                    setEditPlannedGyms(profile.planned_gyms || "");
+                }
+            }, [user, profiles]);
 
             const filteredGyms = gyms.filter(g => {
                 const matchesCity = activeCity === "Where" || g.city === activeCity || g.location?.includes(activeCity);
@@ -364,8 +407,14 @@
                                                 <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2">Password</p>
                                                 <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black" required />
                                             </div>
+                                            {!isLogin && (
+                                                <div>
+                                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2">Confirm Password</p>
+                                                    <input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black" required />
+                                                </div>
+                                            )}
                                             
-                                            {authError && <p className={`text-[10px] font-black uppercase tracking-tight ${authError.includes('Success') ? 'text-green-500' : 'text-red-500'}`}>{authError}</p>}
+                                            {authError && <p className={`text-[10px] font-black uppercase tracking-tight ${authError.includes('Success') || authError.includes('Created') ? 'text-green-500' : 'text-red-500'}`}>{authError}</p>}
                                             
                                             <button type="submit" className="w-full bg-black text-[#d7df22] py-5 rounded-[1.5rem] font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all">
                                                 {isLogin ? "Enter Dashboard" : "Sign Up"}
@@ -392,19 +441,54 @@
                                         <div className="p-12 space-y-12 bg-white text-black text-left">
                                             <div className="space-y-4">
                                                 <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b pb-3"><Icon name="home" className="text-[#d7df22]" size={16}/> Home Gym Base</div>
-                                                <div className="bg-black p-8 rounded-[2.5rem] border-2 border-[#d7df22]/20 flex justify-between items-center shadow-2xl">
-                                                    <div className="text-white"><p className="text-[9px] font-black text-[#d7df22] uppercase mb-1 italic">Current Base</p><h4 className="text-2xl font-black uppercase italic leading-none">{profile.home_gym || "Not Set"}</h4></div>
-                                                    <Icon name="chevron-right" className="bg-[#d7df22] text-black rounded-full p-2" size={24} />
-                                                </div>
+                                                
+                                                {isEditingProfile ? (
+                                                    <input 
+                                                        type="text" 
+                                                        value={editHomeGym} 
+                                                        onChange={(e) => setEditHomeGym(e.target.value)} 
+                                                        placeholder="Enter Home Gym"
+                                                        className="w-full bg-gray-50 p-6 rounded-[2rem] border-2 border-black outline-none font-black italic uppercase text-xl"
+                                                    />
+                                                ) : (
+                                                    <div className="bg-black p-8 rounded-[2.5rem] border-2 border-[#d7df22]/20 flex justify-between items-center shadow-2xl">
+                                                        <div className="text-white"><p className="text-[9px] font-black text-[#d7df22] uppercase mb-1 italic">Current Base</p><h4 className="text-2xl font-black uppercase italic leading-none">{profile.home_gym || "Not Set"}</h4></div>
+                                                        <Icon name="chevron-right" className="bg-[#d7df22] text-black rounded-full p-2" size={24} />
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="space-y-6">
                                                 <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b border-gray-50 pb-3"><Icon name="globe" className="text-[#d7df22]" size={16}/> Athlete Passport Intelligence</div>
                                                 <div className="space-y-4 text-left">
-                                                    <div className="flex justify-between items-center py-2 border-b border-gray-50"><span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest">Visited</span><span className="font-black uppercase italic text-sm text-black text-right">{profile.visited_gyms || "None Recorded"}</span></div>
-                                                    <div className="flex justify-between items-center py-2 border-b border-gray-50"><span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest">Plan to Visit</span><span className="font-black uppercase italic text-sm text-[#d7df22] text-right">{profile.planned_gyms || "None Recorded"}</span></div>
+                                                    <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                                                        <span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest">Visited</span>
+                                                        <span className="font-black uppercase italic text-sm text-black text-right">{profile.visited_gyms || "None Recorded"}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                                                        <span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest">Plan to Visit</span>
+                                                        {isEditingProfile ? (
+                                                            <input 
+                                                                type="text"
+                                                                value={editPlannedGyms}
+                                                                onChange={(e) => setEditPlannedGyms(e.target.value)}
+                                                                placeholder="e.g. Bangtao, Tiger"
+                                                                className="bg-gray-50 p-2 rounded-xl border border-black outline-none font-black uppercase italic text-xs text-right"
+                                                            />
+                                                        ) : (
+                                                            <span className="font-black uppercase italic text-sm text-[#d7df22] text-right">{profile.planned_gyms || "None Recorded"}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <button className="w-full bg-black text-white py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all"><Icon name="settings" size={18}/> Manage Athlete Passport</button>
+                                            
+                                            {isEditingProfile ? (
+                                                <div className="flex gap-4">
+                                                    <button onClick={handleUpdateProfile} className="flex-1 bg-black text-[#d7df22] py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all">Save Changes</button>
+                                                    <button onClick={() => setIsEditingProfile(false)} className="px-8 bg-gray-100 text-gray-400 py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all">Cancel</button>
+                                                </div>
+                                            ) : (
+                                                <button onClick={() => setIsEditingProfile(true)} className="w-full bg-black text-white py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all"><Icon name="settings" size={18}/> Manage Athlete Passport</button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
