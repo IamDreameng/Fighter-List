@@ -104,6 +104,8 @@
             const [revealedSponsors, setRevealedSponsors] = useState(new Set());
             const [revealedFights, setRevealedFights] = useState(new Set());
             const [shareMenuFightId, setShareMenuFightId] = useState(null);
+            const [socialExpand, setSocialExpand] = useState(null); 
+            const [viewedAthlete, setViewedAthlete] = useState(null); 
 
             const [gyms, setGyms] = useState([]);
             const [fights, setFights] = useState([]);
@@ -163,6 +165,7 @@
             const handleAuth = async (e) => {
                 e.preventDefault();
                 setAuthError("");
+                
                 if (isLogin) {
                     const { error } = await supabase.auth.signInWithPassword({ email, password });
                     if (error) setAuthError(error.message);
@@ -185,7 +188,8 @@
                                 full_name: fullName || "Athlete", 
                                 username: email.split('@')[0],
                                 home_gym: "Not Set",
-                                planned_gyms: "None Recorded"
+                                planned_gyms: "None Recorded",
+                                visited_gyms: "None Recorded"
                             }]);
                         }
                         setAuthError("Success! Check email for activation.");
@@ -230,32 +234,33 @@
                 setShareMenuFightId(shareMenuFightId === id ? null : id);
             };
 
-            const AvatarStack = ({ gymId }) => {
+            const AvatarStack = ({ gymId, size = "h-8 w-8" }) => {
                 const attendees = profiles.filter(p => p.current_gym_id == gymId).slice(0, 3);
                 return (
-                    <div className="flex -space-x-1.5 overflow-hidden justify-center items-center h-4">
+                    <div className={`flex -space-x-3 overflow-hidden justify-center items-center ${size.split(' ')[0]}`}>
                         {attendees.map((p, i) => (
-                            <img key={i} src={p.avatar_url} className="inline-block h-3.5 w-3.5 rounded-full ring-1 ring-white object-cover grayscale" alt="user" />
+                            <img key={i} src={p.avatar_url} className={`inline-block ${size} rounded-full ring-2 ring-white object-cover grayscale shadow-sm`} alt="user" />
                         ))}
-                        {attendees.length === 0 && <span className="text-[10px] text-gray-200 font-black">-</span>}
+                        {attendees.length === 0 && <span className="text-xs text-gray-300 font-black">-</span>}
                     </div>
                 );
             };
 
-            const profile = profiles.find(p => p.id === user?.id) || {
+            const myProfile = profiles.find(p => p.id === user?.id) || {
                 full_name: "Athlete",
                 username: "HOLDER",
                 avatar_url: "https://dmxg5wxfqgb4u.cloudfront.net/styles/athlete_bio_full_body/s3/2023-02/VOLKANOVSKI_ALEXANDER_L_02-11.png",
                 home_gym: "Not Set",
-                planned_gyms: "None Recorded"
+                planned_gyms: "None Recorded",
+                visited_gyms: "None Recorded"
             };
 
             useEffect(() => {
-                if (user && profile) {
-                    setEditHomeGym(profile.home_gym || "");
-                    setEditPlannedGyms(profile.planned_gyms || "");
+                if (user && myProfile) {
+                    setEditHomeGym(myProfile.home_gym || "");
+                    setEditPlannedGyms(myProfile.planned_gyms || "");
                 }
-            }, [user, profile.id]);
+            }, [user, myProfile.id]);
 
             const filteredGyms = gyms.filter(g => {
                 const matchesCity = activeCity === "Where" || g.city === activeCity || g.location?.includes(activeCity);
@@ -313,16 +318,78 @@
                 </div>
             );
 
-            return (
-                <div className="min-h-screen bg-white text-black selection-brand font-['Montserrat']">
-                    {/* NAV */}
-                    <nav className="sticky top-0 z-[100] bg-white border-b border-gray-100 h-16 flex items-center justify-between px-4 md:px-12">
-                        <div className="text-xl md:text-2xl font-black italic uppercase tracking-tighter cursor-pointer hover:text-[#d7df22] transition-colors" onClick={() => {setView('gyms'); setShowPassport(false);}}>
-                            FIGHTER LIST
+            const GlobalAdBanner = () => (
+                <div className="w-full px-4 md:px-12 py-10">
+                    <a 
+                        href="https://restround.co" 
+                        target="_blank"
+                        className="block bg-black rounded-[3rem] p-10 md:p-16 relative overflow-hidden group shadow-2xl border-4 border-[#d7df22]/20 hover:border-[#d7df22] transition-all"
+                    >
+                        <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-[#d7df22]/10 to-transparent"></div>
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
+                            <div className="text-left space-y-4">
+                                <h2 className="text-4xl md:text-6xl font-black italic uppercase text-white tracking-tighter leading-none">PROTECT YOUR CAMP</h2>
+                                <p className="text-[#d7df22] text-sm md:text-lg font-black uppercase tracking-[0.3em] italic">HOCL Combat Skin & Gear Hygiene</p>
+                            </div>
+                            <div className="flex flex-col items-center gap-4">
+                                <div className="bg-[#d7df22] text-black px-12 py-5 rounded-2xl font-black uppercase italic tracking-widest text-sm group-hover:scale-110 transition-transform">
+                                    Shop REST ROUND™
+                                </div>
+                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Engineered for the Elite</p>
+                            </div>
                         </div>
-                        <div className="flex gap-1 md:gap-2 bg-gray-50 p-1 rounded-full shadow-inner">
+                    </a>
+                </div>
+            );
+
+            const getCategoryAthletes = (gymId, category) => {
+                if (category === 'Here Now') return profiles.filter(p => p.current_gym_id == gymId);
+                return profiles.slice(0, 4); 
+            };
+
+            const GymLink = ({ name }) => {
+                const gym = gyms.find(g => g.name === name);
+                return (
+                    <span 
+                        className={`cursor-pointer underline decoration-[#d7df22] hover:text-[#d7df22] transition-colors ${!gym ? 'opacity-50 pointer-events-none' : ''}`}
+                        onClick={() => { if(gym) { setSelectedGym(gym); setView('gyms'); setViewedAthlete(null); } }}
+                    >
+                        {name}
+                    </span>
+                );
+            };
+
+            const OfferDisplay = ({ offer }) => {
+                if (!offer) return <span className="text-gray-300 italic">No offer listed</span>;
+                const isLink = offer.startsWith('http');
+                if (isLink) {
+                    return <a href={offer} target="_blank" className="text-[#d7df22] underline font-black uppercase italic break-all text-[11px] hover:text-white transition-colors">Apply / View Official Offer</a>;
+                }
+                return <p className="text-[12px] font-bold leading-relaxed text-black">{offer}</p>;
+            };
+
+            return (
+                <div className="min-h-screen bg-white text-black selection-brand font-['Montserrat'] overflow-x-hidden">
+                    {/* NAV */}
+                    <nav className="sticky top-0 z-[100] bg-white border-b border-gray-100 h-16 flex items-center justify-between px-4 md:px-12 shadow-sm">
+                        <div 
+                            className="flex items-center gap-3 cursor-pointer group" 
+                            onClick={() => {setView('gyms'); setShowPassport(false); setSelectedGym(null); setSearchQuery(""); setSocialExpand(null); setViewedAthlete(null);}}
+                        >
+                            <div className="w-10 h-10 md:w-12 md:h-12 bg-black rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg border border-white/10 group-hover:border-[#d7df22] transition-all">
+                                <svg viewBox="0 0 100 100" className="w-full h-full p-1.5">
+                                    <text x="50%" y="45%" textAnchor="middle" fill="#d7df22" fontFamily="Arial Black, sans-serif" fontSize="18" fontWeight="900" style={{letterSpacing: '-1.5px'}}>FIGHTER</text>
+                                    <text x="50%" y="82%" textAnchor="middle" fill="#d7df22" fontFamily="Arial Black, sans-serif" fontSize="36" fontWeight="900" style={{letterSpacing: '-1.5px'}}>LIST</text>
+                                </svg>
+                            </div>
+                            <div className="hidden lg:block text-xl md:text-2xl font-black italic uppercase tracking-tighter group-hover:text-[#d7df22] transition-colors leading-none">
+                                FIGHTER LIST
+                            </div>
+                        </div>
+
+                        <div className="flex gap-1 md:gap-2 bg-gray-50 p-1 rounded-full shadow-inner border border-gray-100">
                             {['gyms', 'fights', 'gear', 'sponsors'].map(id => (
-                                <button key={id} onClick={() => {setView(id); setShowPassport(false);}} className={`flex items-center gap-2 px-4 md:px-5 py-2 rounded-full text-[9px] md:text-[10px] font-black uppercase transition-all ${view === id && !showPassport ? 'bg-black text-[#d7df22] shadow-lg' : 'text-gray-400'}`}>
+                                <button key={id} onClick={() => {setView(id); setShowPassport(false); setViewedAthlete(null);}} className={`flex items-center gap-2 px-4 md:px-5 py-2 rounded-full text-[9px] md:text-[10px] font-black uppercase transition-all ${view === id && !showPassport ? 'bg-black text-[#d7df22] shadow-lg' : 'text-gray-400'}`}>
                                     <Icon name={id==='gyms'?'map-pin':id==='fights'?'swords':id==='gear'?'shopping-bag':'target'} size={14} /> <span className="hidden sm:inline">{id.charAt(0).toUpperCase() + id.slice(1)}</span>
                                 </button>
                             ))}
@@ -333,11 +400,11 @@
                     </nav>
 
                     {/* FILTER STRIP */}
-                    {isPublicView && !showPassport && (
+                    {isPublicView && !showPassport && !viewedAthlete && (
                         <div className="bg-white border-b border-gray-100 py-4 sticky top-16 z-40 px-4 md:px-12 space-y-4 shadow-sm text-left">
                             <div className="w-full space-y-4">
                                 {(view === 'gyms' || view === 'fights') && (
-                                    <div className="flex items-center gap-3 overflow-x-auto no-scrollbar text-black">
+                                    <div className="flex items-center gap-3 overflow-x-auto no-scrollbar text-black text-left">
                                         <Icon name="globe" size={16} className="text-[#d7df22] shrink-0"/>
                                         {["Where", "Phuket", "Patong", "Perth", "Bangkok", "Austin", "LA"].map(city => (
                                             <button key={city} onClick={() => setActiveCity(city)} className={`whitespace-nowrap px-4 py-2 rounded-xl text-[9px] font-black uppercase border transition-all ${activeCity === city ? 'bg-black text-[#d7df22] border-black shadow-lg' : 'text-gray-400 border-gray-100 bg-white'}`}>{city}</button>
@@ -355,7 +422,7 @@
                                     )}
                                     <div className="relative flex-1 min-w-[200px]">
                                         <Icon name="search" size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
-                                        <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={`Search ${view}...`} className="bg-gray-50 border border-gray-100 py-2.5 pl-9 pr-4 rounded-xl text-[10px] font-bold outline-none focus:border-black w-full" />
+                                        <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={`Search ${view}...`} className="bg-gray-50 border border-gray-100 py-2.5 pl-9 pr-4 rounded-xl text-[10px] font-bold outline-none focus:border-black w-full text-black shadow-inner" />
                                     </div>
                                 </div>
                             </div>
@@ -365,14 +432,39 @@
                     <main className="w-full px-4 md:px-12 py-8 min-h-[60vh]">
                         {loading ? (
                             <div className="py-20 text-gray-400 font-black uppercase tracking-[0.3em] animate-pulse italic text-center">Connecting Intelligence...</div>
+                        ) : viewedAthlete ? (
+                            /* ATHLETE PROFILE VIEW */
+                            <div className="max-w-2xl mx-auto py-10 text-left animate-slide-up">
+                                <button onClick={() => setViewedAthlete(null)} className="mb-8 flex items-center gap-2 font-black uppercase italic text-[10px] text-gray-400 hover:text-black transition-colors">
+                                    <Icon name="arrow-left" size={16} /> Return to Intelligence Feed
+                                </button>
+                                <div className="bg-white rounded-[3rem] overflow-hidden shadow-2xl border border-gray-100">
+                                    <div className="bg-black p-12 text-center relative">
+                                        <img src={viewedAthlete.avatar_url} className="w-40 h-40 rounded-full border-4 border-[#d7df22] mx-auto mb-8 object-cover bg-gray-900 shadow-2xl" alt="Athlete" />
+                                        <h2 className="text-4xl font-black italic uppercase text-white tracking-tighter leading-none">{viewedAthlete.full_name}</h2>
+                                        <a href={`https://instagram.com/${viewedAthlete.username}`} target="_blank" className="text-[#d7df22] text-[10px] font-black uppercase tracking-[0.4em] mt-4 bg-white/10 px-6 py-2 rounded-full inline-block italic hover:bg-[#d7df22] hover:text-black transition-all">@{viewedAthlete.username || "athlete"}</a>
+                                    </div>
+                                    <div className="p-12 space-y-12 bg-white text-black text-left">
+                                        <ProfileSection title="Home Gym Base" content={viewedAthlete.home_gym} icon="home" />
+                                        <div className="space-y-6">
+                                            <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b border-gray-50 pb-3"><Icon name="globe" className="text-[#d7df22]" size={16}/> Athlete Community Status</div>
+                                            <div className="space-y-4">
+                                                <div className="flex justify-between items-center py-4 border-b border-gray-50"><span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest">Here Now</span><span className="font-black uppercase italic text-sm text-[#d7df22] text-right"><GymLink name={viewedAthlete.current_gym || "Not Active"} /></span></div>
+                                                <div className="flex justify-between items-center py-4 border-b border-gray-50"><span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest">Visit Soon</span><span className="font-black uppercase italic text-sm text-black text-right"><GymLink name={viewedAthlete.planned_gyms || "None Recorded"} /></span></div>
+                                                <div className="flex justify-between items-center py-4 border-b border-gray-50"><span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest">Was Here</span><span className="font-black uppercase italic text-sm text-black text-right"><GymLink name={viewedAthlete.visited_gyms || "None Recorded"} /></span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         ) : (
                           <div className="animate-fade-in text-center">
                             
                             {/* AUTH VIEW */}
                             {view === 'auth' && !user && (
                                 <div className="max-w-md mx-auto py-10 text-left">
-                                    <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 p-10">
-                                        <h2 className="text-3xl font-black italic uppercase mb-2 tracking-tighter leading-none">
+                                    <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 p-10 text-black">
+                                        <h2 className="text-3xl font-black italic uppercase mb-2 tracking-tighter leading-none text-black">
                                             {isLogin ? "Athlete Login" : "Sign Up"}
                                         </h2>
                                         <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-8">Join the elite combat directory</p>
@@ -380,21 +472,21 @@
                                             {!isLogin && (
                                                 <div>
                                                     <p className="text-[8px] font-black text-gray-400 uppercase mb-1 ml-2 tracking-widest">Full Name</p>
-                                                    <input type="text" placeholder="Alex Volkanovski" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black" required />
+                                                    <input type="text" placeholder="Alex Volkanovski" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black shadow-inner" required />
                                                 </div>
                                             )}
                                             <div>
                                                 <p className="text-[8px] font-black text-gray-400 uppercase mb-1 ml-2 tracking-widest">Email</p>
-                                                <input type="email" placeholder="athlete@fighterlist.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black" required />
+                                                <input type="email" placeholder="athlete@fighterlist.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black shadow-inner" required />
                                             </div>
                                             <div>
                                                 <p className="text-[8px] font-black text-gray-400 uppercase mb-1 ml-2 tracking-widest">Password</p>
-                                                <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black" required />
+                                                <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black shadow-inner" required />
                                             </div>
                                             {!isLogin && (
                                                 <div>
                                                     <p className="text-[8px] font-black text-gray-400 uppercase mb-1 ml-2 tracking-widest">Confirm Password</p>
-                                                    <input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black" required />
+                                                    <input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black shadow-inner" required />
                                                 </div>
                                             )}
                                             {authError && <p className="text-[10px] font-black uppercase tracking-tight text-red-500">{authError}</p>}
@@ -413,210 +505,167 @@
                             {showPassport && user && (
                                 <div className="max-w-2xl mx-auto py-10 text-left animate-slide-up">
                                     <div className="bg-white rounded-[3rem] overflow-hidden shadow-2xl border border-gray-100">
-                                        <div className="bg-black p-12 text-center relative">
-                                            <button onClick={() => {supabase.auth.signOut(); setShowPassport(false);}} className="absolute top-6 right-6 text-[#d7df22] hover:text-white transition-colors"><Icon name="log-out" size={18} /></button>
-                                            <img src={profile.avatar_url} className="w-32 h-32 rounded-full border-4 border-[#d7df22] mx-auto mb-6 object-cover bg-gray-900 shadow-2xl" alt="Athlete" />
-                                            <h2 className="text-3xl font-black italic uppercase text-white tracking-tighter leading-none">{profile.full_name}</h2>
-                                            <p className="text-[#d7df22] text-[10px] font-black uppercase tracking-[0.4em] mt-3 bg-white/10 px-6 py-2 rounded-full inline-block italic">@{profile.username}</p>
+                                        <div className="bg-black p-12 text-center relative text-black">
+                                            <button onClick={() => {supabase.signOut(); setShowPassport(false);}} className="absolute top-6 right-6 text-[#d7df22] hover:text-white transition-colors"><Icon name="log-out" size={18} /></button>
+                                            <img src={myProfile.avatar_url} className="w-32 h-32 rounded-full border-4 border-[#d7df22] mx-auto mb-6 object-cover bg-gray-900 shadow-2xl" alt="Athlete" />
+                                            <h2 className="text-3xl font-black italic uppercase text-white tracking-tighter leading-none">{myProfile.full_name}</h2>
+                                            <a href={`https://instagram.com/${myProfile.username}`} target="_blank" className="text-[#d7df22] text-[10px] font-black uppercase tracking-[0.4em] mt-3 bg-white/10 px-6 py-2 rounded-full inline-block italic hover:bg-[#d7df22] hover:text-black transition-all">@{myProfile.username}</a>
                                         </div>
                                         <div className="p-12 space-y-12 bg-white text-black">
                                             <div className="space-y-4">
-                                                <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b pb-3"><Icon name="home" className="text-[#d7df22]" size={16}/> Home Gym Base</div>
+                                                <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b pb-3 text-black"><Icon name="home" className="text-[#d7df22]" size={16}/> Home Gym Base</div>
                                                 {isEditingProfile ? (
-                                                    <input type="text" value={editHomeGym} onChange={(e) => setEditHomeGym(e.target.value)} placeholder="Home Gym" className="w-full bg-gray-50 p-6 rounded-[2rem] border-2 border-black outline-none font-black uppercase italic text-xl" />
+                                                    <input type="text" value={editHomeGym} onChange={(e) => setEditHomeGym(e.target.value)} placeholder="Home Gym Name" className="w-full bg-gray-50 p-6 rounded-[2rem] border-2 border-black outline-none font-black uppercase italic text-xl text-black shadow-inner" />
                                                 ) : (
-                                                    <div className="bg-black p-8 rounded-[2.5rem] border-2 border-[#d7df22]/20 flex justify-between items-center shadow-2xl">
-                                                        <div className="text-white"><p className="text-[9px] font-black text-[#d7df22] uppercase mb-1 italic">Current Base</p><h4 className="text-2xl font-black uppercase italic leading-none">{profile.home_gym || "Not Set"}</h4></div>
-                                                        <Icon name="chevron-right" className="bg-[#d7df22] text-black rounded-full p-2" size={24} />
+                                                    <div className="bg-black p-8 rounded-[2.5rem] border-2 border-[#d7df22]/20 flex justify-between items-center shadow-2xl text-black">
+                                                        <div className="text-white text-left"><p className="text-[9px] font-black text-[#d7df22] uppercase mb-1 italic text-left">Current Base</p><h4 className="text-2xl font-black uppercase italic leading-none"><GymLink name={myProfile.home_gym || "Not Set"} /></h4></div>
+                                                        <Icon name="award" className="text-[#d7df22]" size={24} />
                                                     </div>
                                                 )}
                                             </div>
                                             <div className="space-y-6">
-                                                <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b border-gray-50 pb-3"><Icon name="globe" className="text-[#d7df22]" size={16}/> Athlete Passport Intelligence</div>
-                                                <div className="space-y-4">
-                                                    <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                                                        <span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest">Plan to Visit</span>
-                                                        {isEditingProfile ? (
-                                                            <input type="text" value={editPlannedGyms} onChange={(e) => setEditPlannedGyms(e.target.value)} placeholder="Gym names" className="bg-gray-50 p-2 rounded-xl border border-black outline-none font-black uppercase italic text-xs text-right" />
-                                                        ) : (
-                                                            <span className="font-black uppercase italic text-sm text-[#d7df22] text-right">{profile.planned_gyms || "None Recorded"}</span>
-                                                        )}
-                                                    </div>
+                                                <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b border-gray-50 pb-3 text-black text-left"><Icon name="globe" className="text-[#d7df22]" size={16}/> Athlete Community Status</div>
+                                                <div className="space-y-4 text-black text-left">
+                                                    <div className="flex justify-between items-center py-4 border-b border-gray-50"><span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest text-left">Here Now</span><span className="font-black uppercase italic text-sm text-[#d7df22] text-right"><GymLink name={myProfile.current_gym || "Not Active"} /></span></div>
+                                                    <div className="flex justify-between items-center py-4 border-b border-gray-50"><span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest text-left">Visit Soon</span>{isEditingProfile ? <input type="text" value={editPlannedGyms} onChange={(e) => setEditPlannedGyms(e.target.value)} className="bg-gray-50 p-2 rounded-xl border border-black outline-none font-black uppercase italic text-xs text-right text-black shadow-inner" /> : <span className="font-black uppercase italic text-sm text-black text-right"><GymLink name={myProfile.planned_gyms || "None Recorded"} /></span>}</div>
+                                                    <div className="flex justify-between items-center py-4 border-b border-gray-50"><span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest text-left">Was Here</span><span className="font-black uppercase italic text-sm text-black text-right"><GymLink name={myProfile.visited_gyms || "None Recorded"} /></span></div>
                                                 </div>
                                             </div>
                                             <div className="flex gap-4">
-                                                {isEditingProfile ? (
-                                                    <button onClick={handleUpdateProfile} className="flex-1 bg-black text-[#d7df22] py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest flex items-center justify-center gap-3 shadow-2xl">Save Passport</button>
-                                                ) : (
-                                                    <button onClick={() => setIsEditingProfile(true)} className="w-full bg-black text-white py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all"><Icon name="settings" size={18}/> Manage Athlete Passport</button>
-                                                )}
+                                                {isEditingProfile ? <button onClick={handleUpdateProfile} className="flex-1 bg-black text-[#d7df22] py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest flex items-center justify-center gap-3 shadow-2xl">Save Changes</button> : <button onClick={() => setIsEditingProfile(true)} className="w-full bg-black text-white py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all text-white"><Icon name="settings" size={18}/> Manage Athlete Passport</button>}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* GYMS VIEW */}
+                            {/* MAIN GRIDS */}
                             {view === 'gyms' && !showPassport && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left w-full">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 text-left w-full text-black">
                                     {filteredGyms.map((gym, idx) => {
                                         const elements = [];
-                                        if (idx === 3) {
-                                            elements.push(<AdBox key="ad-box" />);
-                                        }
+                                        if (idx === 3) elements.push(<AdBox key="ad-box" />);
                                         elements.push(
-                                            <div key={gym.id} className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-xl cursor-pointer hover:shadow-2xl transition-all group flex flex-col h-full" onClick={() => setSelectedGym(gym)}>
-                                                <div className="relative h-48 overflow-hidden bg-gray-50 shrink-0">
+                                            <div key={gym.id} className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-xl cursor-pointer hover:shadow-2xl transition-all group flex flex-col h-full text-black" onClick={() => setSelectedGym(gym)}>
+                                                <div className="relative h-64 overflow-hidden bg-gray-50 shrink-0">
                                                     <img src={gym.image_url || "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=800"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="gym" />
                                                     <div className="absolute top-4 left-4 flex gap-1">
-                                                        {gym.name?.toLowerCase().includes("bangtao") && <span className="bg-[#d7df22] text-black text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest shadow-lg">Featured</span>}
+                                                        {gym.name?.toLowerCase().includes("bangtao") && <span className="bg-[#d7df22] text-black text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest shadow-lg italic">Featured</span>}
                                                     </div>
                                                 </div>
-                                                <div className="p-6 flex flex-col flex-1">
-                                                    <div className="flex items-center gap-1 text-gray-400 font-bold uppercase text-[8px] tracking-widest mb-1 truncate"><Icon name="map-pin" size={10} className="text-red-500" /> {gym.location || gym.city}</div>
-                                                    <h3 className="text-sm font-black italic uppercase leading-tight mb-4 truncate">{gym.name}</h3>
-                                                    
-                                                    {/* SOCIAL STATUS BOX */}
-                                                    <div className="grid grid-cols-3 gap-1 py-3 border-y border-gray-50 mb-4 text-center">
-                                                        <div className="border-r border-gray-50 space-y-1">
-                                                            <p className="text-[6px] font-black text-gray-400 uppercase tracking-tighter leading-none">Here Now</p>
-                                                            <AvatarStack gymId={gym.id} />
-                                                        </div>
-                                                        <div className="border-r border-gray-50 space-y-1">
-                                                            <p className="text-[6px] font-black text-gray-400 uppercase tracking-tighter leading-none">Was Here</p>
-                                                            <span className="text-[10px] font-black leading-none block">-</span>
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <p className="text-[6px] font-black text-gray-400 uppercase tracking-tighter leading-none">Visit Soon</p>
-                                                            <span className="text-[10px] font-black leading-none block">-</span>
-                                                        </div>
+                                                <div className="p-8 flex flex-col flex-1 text-black">
+                                                    <div className="flex items-center gap-1.5 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-1 truncate"><Icon name="map-pin" size={12} className="text-red-500" /> {gym.location || gym.city}</div>
+                                                    <h3 className="text-xl font-black italic uppercase leading-tight mb-6 truncate text-black">{gym.name}</h3>
+                                                    <div className="grid grid-cols-3 gap-1 py-4 border-y border-gray-50 mb-6 text-center text-black">
+                                                        <div className="border-r border-gray-50 space-y-2 hover:bg-gray-50 transition-colors py-1 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); setSocialExpand({ gymId: gym.id, category: 'Here Now' }); }}><p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter leading-none mb-2 italic">Here Now</p><AvatarStack gymId={gym.id} size="h-8 w-8" /></div>
+                                                        <div className="border-r border-gray-50 space-y-2 hover:bg-gray-50 transition-colors py-1 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); setSocialExpand({ gymId: gym.id, category: 'Visit Soon' }); }}><p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter leading-none mb-2 italic">Visit Soon</p><span className="text-xl font-black leading-none text-black">-</span></div>
+                                                        <div className="space-y-2 hover:bg-gray-50 transition-colors py-1 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); setSocialExpand({ gymId: gym.id, category: 'Was Here' }); }}><p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter leading-none mb-2 italic">Was Here</p><span className="text-xl font-black leading-none text-black">-</span></div>
                                                     </div>
-
-                                                    <button className="w-full bg-black text-[#d7df22] py-2 rounded-xl font-black uppercase text-[8px] tracking-[0.2em] shadow-md mt-auto">Details</button>
+                                                    <button className="w-full bg-black text-[#d7df22] py-3 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] shadow-md mt-auto">Details</button>
                                                 </div>
                                             </div>
                                         );
                                         return elements;
                                     })}
-                                    {filteredGyms.length < 4 && <AdBox key="ad-box-fallback" />}
                                 </div>
                             )}
 
-                            {/* GEAR VIEW */}
                             {view === 'gear' && (
                                 <div className="space-y-10 text-left text-black">
                                     <h2 className="text-4xl font-black italic uppercase tracking-tighter text-black leading-none">GEAR DISCOUNTS</h2>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch w-full">
-                                        {(user ? filteredGear : filteredGear.slice(0, 5)).map((item, i) => (
-                                            <div key={i} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all text-black h-full">
-                                                <div>
-                                                    <span className="bg-[#d7df22] text-black px-4 py-1 rounded-full text-[10px] font-black uppercase mb-6 inline-block border border-black/5 shadow-sm">{item.discount_amount}</span>
-                                                    <p className="text-[9px] font-black text-gray-400 uppercase mb-1 tracking-widest">{item.brand_name}</p>
-                                                    <h4 className="text-lg font-black italic uppercase mb-6 leading-tight">{item.product_name}</h4>
-                                                    <div className="bg-gray-50 p-4 rounded-2xl border-2 border-dashed border-gray-100 flex justify-between items-center mb-6 font-mono font-black text-lg text-black">
-                                                        <span>{item.discount_code}</span>
-                                                        <CopyButton text={item.discount_code} showText={true} />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-stretch w-full text-black">
+                                        {(user ? filteredGear : filteredGear.slice(0, 5)).map((item, i) => {
+                                            const elements = [];
+                                            if (i === 3) elements.push(<AdBox key="ad-box-gear" />);
+                                            elements.push(
+                                                <div key={i} className="bg-white border-2 border-gray-100 p-10 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all text-black h-full shadow-inner">
+                                                    <div>
+                                                        <span className="bg-[#d7df22] text-black px-4 py-1 rounded-full text-[10px] font-black uppercase mb-6 inline-block border border-black/5 shadow-sm">-{item.discount_amount}</span>
+                                                        <p className="text-[10px] font-black text-gray-400 uppercase mb-1 tracking-widest text-black italic">Sector Partner</p>
+                                                        <h4 className="text-2xl font-black italic uppercase mb-8 leading-tight text-black">{item.product_name}</h4>
+                                                        <div className="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-100 flex justify-between items-center mb-8 font-mono font-black text-xl text-black shadow-inner">
+                                                            <span>{item.discount_code}</span>
+                                                            <CopyButton text={item.discount_code} showText={true} />
+                                                        </div>
                                                     </div>
+                                                    <button onClick={() => window.open(item.affiliate_url)} className="w-full bg-black text-[#d7df22] py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-lg mt-auto">Get Deal</button>
                                                 </div>
-                                                <button onClick={() => window.open(item.affiliate_url)} className="w-full bg-black text-[#d7df22] py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg mt-auto">Get Deal</button>
-                                            </div>
-                                        ))}
-                                        {!user && filteredGear.length >= 5 && (
-                                            <div className="h-full"><RegisterCTA title="Unlock More Gear" text="See 20+ hidden combat gear discounts" /></div>
-                                        )}
+                                            );
+                                            return elements;
+                                        })}
+                                        {!user && filteredGear.length >= 5 && <RegisterCTA title="Unlock More Gear" text="See 20+ hidden combat gear discounts" />}
                                     </div>
                                 </div>
                             )}
 
-                            {/* SPONSORS VIEW */}
                             {view === 'sponsors' && (
                                 <div className="space-y-10 text-left text-black">
-                                    <div className="bg-[#d7df22] p-12 rounded-[3rem] text-black shadow-2xl relative overflow-hidden">
-                                        <div className="absolute right-[-5%] top-[-10%] opacity-10 rotate-12"><Icon name="target" size={200} /></div>
-                                        <h2 className="text-4xl md:text-5xl font-black italic uppercase mb-4 tracking-tighter leading-none">Sponsors guide</h2>
-                                        <p className="max-w-xl font-bold text-sm leading-loose uppercase tracking-widest opacity-80 text-black">Sponsorship is a partnership. Connect with brands dedicated to combat athletes.</p>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch w-full">
-                                        {(user ? filteredSponsors : filteredSponsors.slice(0, 5)).map(s => (
-                                            <div key={s.id} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all">
-                                                <div>
-                                                    <h3 className="text-xl font-black italic uppercase mb-1 leading-none">{s.brand_name}</h3>
-                                                    <p className="text-[#d7df22] font-black uppercase text-[8px] tracking-[0.2em] bg-black inline-block px-2 py-0.5 rounded mb-8 italic">{s.focus}</p>
-                                                    <div className="space-y-4 mb-8">
-                                                        <div className="bg-gray-50 p-4 rounded-2xl"><p className="text-[8px] font-black text-gray-400 uppercase mb-1 tracking-widest">Requirement</p><p className="text-[10px] font-bold leading-tight">{s.requirements}</p></div>
+                                    <a 
+                                        href="https://restround.co/blogs/combat-gear-skin-spray/the-sponsorship-blueprint-how-to-fund-your-fight-career-in-2026" 
+                                        target="_blank" 
+                                        className="block bg-[#d7df22] p-12 md:p-20 rounded-[3rem] text-black shadow-2xl relative overflow-hidden group shadow-inner"
+                                    >
+                                        <div className="absolute right-[-5%] top-[-10%] opacity-10 rotate-12 text-black group-hover:scale-110 transition-transform"><Icon name="target" size={250} /></div>
+                                        <h2 className="text-4xl md:text-6xl font-black italic uppercase mb-4 tracking-tighter leading-none text-black">Sponsors guide</h2>
+                                        <p className="max-w-2xl font-bold text-base leading-loose uppercase tracking-widest opacity-80 text-black text-left italic">The Sponsorship Blueprint: How to Fund Your Fight Career in 2026. <span className="underline">Read Official Dossier</span></p>
+                                    </a>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-stretch w-full text-black">
+                                        {(user ? filteredSponsors : filteredSponsors.slice(0, 5)).map((s, i) => {
+                                            const elements = [];
+                                            if (i === 3) elements.push(<AdBox key="ad-box-sponsor" />);
+                                            elements.push(
+                                                <div key={s.id} className="bg-white border-2 border-gray-100 p-10 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all">
+                                                    <div className="text-left text-black">
+                                                        <h3 className="text-2xl font-black italic uppercase mb-2 leading-none text-black">{s.brand_name}</h3>
+                                                        <p className="text-[#d7df22] font-black uppercase text-[9px] tracking-[0.2em] bg-black inline-block px-4 py-1 rounded-full mb-10 italic">Performance Partner</p>
+                                                        <div className="space-y-6 mb-10 text-black text-left">
+                                                            <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 text-black shadow-inner">
+                                                                <p className="text-[9px] font-black text-gray-400 uppercase mb-2 tracking-widest italic text-black">Requirement</p>
+                                                                <p className="text-[12px] font-bold leading-relaxed text-black">{s.requirements || "Active status required."}</p>
+                                                            </div>
+                                                            <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 text-black shadow-inner">
+                                                                <p className="text-[9px] font-black text-gray-400 uppercase mb-2 tracking-widest italic text-black">Offer</p>
+                                                                <div className="text-black text-left"><OfferDisplay offer={s.offer} /></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-auto">
+                                                        {!revealedSponsors.has(s.id) ? <button onClick={() => toggleSponsorReveal(s.id)} className="w-full py-5 rounded-2xl font-black uppercase italic tracking-widest text-[11px] bg-black text-white hover:bg-[#d7df22] hover:text-black transition-all flex items-center justify-center gap-2 shadow-xl">Contact</button> : <div className="flex items-center gap-3 bg-black text-white p-3 rounded-2xl animate-fade-in shadow-lg"><span className="text-[11px] font-black italic px-2 flex-1 truncate">{s.email || 'team.restround@gmail.com'}</span><CopyButton text={s.email || 'team.restround@gmail.com'} size={12} showText={true} customStyle="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg shadow-inner" /><button onClick={() => toggleSponsorReveal(s.id)} className="text-white/40 hover:text-red-500 px-1 transition-colors"><Icon name="x" size={14} /></button></div>}
                                                     </div>
                                                 </div>
-                                                <div className="mt-auto">
-                                                    {!revealedSponsors.has(s.id) ? (
-                                                        <button onClick={() => toggleSponsorReveal(s.id)} className="w-full py-4 rounded-2xl font-black uppercase italic tracking-widest text-[10px] bg-black text-white hover:bg-[#d7df22] hover:text-black transition-all flex items-center justify-center gap-2 shadow-xl">Contact</button>
-                                                    ) : (
-                                                        <div className="flex items-center gap-2 bg-black text-white p-2 rounded-2xl animate-fade-in shadow-lg">
-                                                            <span className="text-[10px] font-black italic px-2 flex-1 truncate">{s.email || 'team.restround@gmail.com'}</span>
-                                                            <CopyButton text={s.email || 'team.restround@gmail.com'} size={11} showText={true} customStyle="bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg" />
-                                                            <button onClick={() => toggleSponsorReveal(s.id)} className="text-white/40 hover:text-red-500 px-1"><Icon name="x" size={12} /></button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {!user && filteredSponsors.length >= 5 && (
-                                            <div className="h-full"><RegisterCTA title="Unlock More Sponsors" text="Connect with brands looking for talent" /></div>
-                                        )}
+                                            );
+                                            return elements;
+                                        })}
+                                        {!user && filteredSponsors.length >= 5 && <RegisterCTA title="Unlock More Sponsors" text="Connect with brands looking for talent" />}
                                     </div>
                                 </div>
                             )}
 
-                            {/* FIGHTS VIEW */}
                             {view === 'fights' && (
                                 <div className="max-w-5xl mx-auto space-y-4 text-left text-black">
-                                    <h2 className="text-4xl font-black italic uppercase mb-10 tracking-tighter leading-none">Community Updates</h2>
-                                    <div className="grid grid-cols-1 gap-3">
+                                    <h2 className="text-4xl font-black italic uppercase mb-10 tracking-tighter leading-none text-black">Community Updates</h2>
+                                    <div className="grid grid-cols-1 gap-3 text-black">
                                         {(user ? filteredFights : filteredFights.slice(0, 5)).map(f => (
                                             <div key={f.id} className="bg-white border-2 border-black p-4 rounded-2xl flex flex-col shadow-md relative group animate-fade-in text-black">
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <div className="flex items-center gap-4 flex-1 text-black">
-                                                        <div className="bg-gray-50 p-2 rounded-xl text-center min-w-[65px] border border-gray-100 shadow-inner shrink-0 text-black">
-                                                            <p className="text-lg font-black italic tracking-tighter">{f.event_date?.split(' ')[1] || "TBD"}</p>
-                                                        </div>
-                                                        <div className="text-left space-y-0.5 overflow-hidden pr-2">
-                                                            <span className="bg-[#d7df22] text-black px-2 py-0.2 rounded-full text-[7px] font-black uppercase tracking-widest">{f.fight_type}</span>
-                                                            <h3 className="text-sm md:text-base font-black italic uppercase leading-tight tracking-tighter truncate text-black">{f.event_name}</h3>
-                                                            <p className="text-gray-400 font-bold uppercase text-[8px] flex items-center gap-1 tracking-widest italic leading-none"><Icon name="map-pin" size={10} className="text-red-500" /> {f.city}</p>
-                                                        </div>
+                                                <div className="flex items-center justify-between gap-4 text-black text-left">
+                                                    <div className="flex items-center gap-4 flex-1 text-black text-left">
+                                                        <div className="bg-gray-50 p-2 rounded-xl text-center min-w-[65px] border border-gray-100 shadow-inner shrink-0 text-black"><p className="text-lg font-black italic tracking-tighter text-black">{f.event_date?.split(' ')[1] || "TBD"}</p></div>
+                                                        <div className="text-left space-y-0.5 overflow-hidden pr-2 text-black"><span className="bg-[#d7df22] text-black px-2 py-0.2 rounded-full text-[7px] font-black uppercase tracking-widest">Call Out</span><h3 className="text-sm md:text-base font-black italic uppercase leading-tight tracking-tighter truncate text-black">{f.event_name}</h3><p className="text-gray-400 font-bold uppercase text-[8px] flex items-center gap-1 tracking-widest italic leading-none text-black"><Icon name="map-pin" size={10} className="text-red-500" /> {f.city}</p></div>
                                                     </div>
-                                                    <div className="flex items-center gap-3 shrink-0 relative">
-                                                        {!revealedFights.has(f.id) ? (
-                                                            <button onClick={() => toggleFightReveal(f.id)} className="px-6 py-2 bg-black text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-[#d7df22] hover:text-black shadow-sm">Contact</button>
-                                                        ) : (
-                                                            <div className="flex items-center gap-2 bg-black text-white p-1 rounded-xl animate-fade-in shadow-xl">
-                                                                <span className="text-[9px] font-black italic px-2 max-w-[140px] truncate">{f.contact_info}</span>
-                                                                <CopyButton text={f.contact_info} size={11} showText={true} customStyle="bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg" />
-                                                                <button onClick={() => toggleFightReveal(f.id)} className="text-white/40 hover:text-red-500 transition-colors px-1"><Icon name="x" size={12} /></button>
-                                                            </div>
-                                                        )}
-                                                        <button onClick={() => toggleShareMenu(f.id)} className={`p-2 rounded-full transition-all border border-gray-100 shadow-sm ${shareMenuFightId === f.id ? 'bg-[#d7df22] text-black' : 'bg-gray-50 text-gray-400 hover:text-black'}`}><Icon name="share-2" size={12} /></button>
-                                                    </div>
+                                                    <div className="flex items-center gap-3 shrink-0 relative text-black">{!revealedFights.has(f.id) ? <button onClick={() => toggleFightReveal(f.id)} className="px-6 py-2 bg-black text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-[#d7df22] hover:text-black shadow-sm shadow-xl">Contact</button> : <div className="flex items-center gap-2 bg-black text-white p-1 rounded-xl animate-fade-in shadow-xl text-black"><span className="text-[9px] font-black italic px-2 max-w-[140px] truncate text-white">{f.contact_info}</span><CopyButton text={f.contact_info} size={11} showText={true} customStyle="bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg shadow-inner" /><button onClick={() => toggleFightReveal(f.id)} className="text-white/40 hover:text-red-500 transition-colors px-1"><Icon name="x" size={12} /></button></div>}<button onClick={() => toggleShareMenu(f.id)} className={`p-2 rounded-full transition-all border border-gray-100 shadow-sm shadow-xl ${shareMenuFightId === f.id ? 'bg-[#d7df22] text-black' : 'bg-gray-50 text-gray-400 hover:text-black'}`}><Icon name="share-2" size={12} /></button></div>
                                                 </div>
-                                                {shareMenuFightId === f.id && (
-                                                    <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between bg-gray-50 p-2 rounded-xl animate-fade-in">
-                                                        <div className="flex items-center gap-4 px-2">
-                                                            <button onClick={() => handleShare('ig', f)} className="hover:text-pink-600 transition-colors"><InstagramIcon size={16} /></button>
-                                                            <button onClick={() => handleShare('fb', f)} className="hover:text-blue-600 transition-colors"><FBIcon size={16} /></button>
-                                                            <button onClick={() => handleShare('wa', f)} className="hover:text-green-600 transition-colors"><WhatsAppIcon size={16} /></button>
-                                                        </div>
-                                                        <button onClick={() => setShareMenuFightId(null)} className="ml-auto text-gray-300 hover:text-red-500 transition-colors px-2 text-black"><Icon name="x" size={14}/></button>
-                                                    </div>
-                                                )}
+                                                {shareMenuFightId === f.id && <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between bg-gray-50 p-2 rounded-xl animate-fade-in text-black shadow-inner"><div className="flex items-center gap-4 px-2 text-black text-left"><button onClick={() => handleShare('ig', f)} className="hover:text-pink-600 transition-colors"><InstagramIcon size={16} /></button><button onClick={() => handleShare('fb', f)} className="hover:text-blue-600 transition-colors"><FBIcon size={16} /></button><button onClick={() => handleShare('wa', f)} className="hover:text-green-600 transition-colors"><WhatsAppIcon size={16} /></button></div><button onClick={() => setShareMenuFightId(null)} className="ml-auto text-gray-300 hover:text-red-500 transition-colors px-2 text-black"><Icon name="x" size={14}/></button></div>}
                                             </div>
                                         ))}
-                                        {!user && filteredFights.length >= 5 && <RegisterCTA fullWidth title="Unlock More Fights" text="Gain access to the full matchmaking intelligence feed" />}
                                     </div>
-                                    {filteredFights.length === 0 && <div className="py-20 text-center text-gray-400 font-black uppercase tracking-widest italic">No fights match your search</div>}
                                 </div>
                             )}
                           </div>
                         )}
                     </main>
+
+                    {/* GLOBAL AD BANNER ABOVE FOOTER */}
+                    <GlobalAdBanner />
 
                     {/* FOOTER */}
                     <footer className="bg-white py-12 border-t border-gray-100 text-black">
@@ -637,51 +686,42 @@
                         </div>
                     </footer>
 
+                    {/* SOCIAL EXPAND OVERLAY */}
+                    {socialExpand && (
+                        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 text-black text-left">
+                            <div className="absolute inset-0 bg-black/90 backdrop-blur-md animate-fade-in text-left" onClick={() => setSocialExpand(null)} />
+                            <div className="relative bg-white w-full max-w-lg rounded-[3rem] overflow-hidden shadow-2xl p-8 animate-slide-up text-black text-left">
+                                <button onClick={() => setSocialExpand(null)} className="absolute top-6 right-6 text-gray-300 hover:text-black transition-colors text-left"><Icon name="x" size={24} /></button>
+                                <h3 className="text-2xl font-black italic uppercase mb-2 tracking-tighter text-black text-left">{socialExpand.category}</h3>
+                                <p className="text-[10px] font-black uppercase text-gray-400 mb-8 italic tracking-widest text-black text-left">Sector live intelligence intelligence</p>
+                                <div className="grid grid-cols-4 gap-6 overflow-y-auto max-h-[60vh] p-2 no-scrollbar text-black text-left">
+                                    {getCategoryAthletes(socialExpand.gymId, socialExpand.category).map((p, i) => (
+                                        <div key={i} className="group cursor-pointer flex flex-col items-center gap-2 text-black text-center" onClick={() => { setViewedAthlete(p); setSocialExpand(null); setSelectedGym(null); }}>
+                                            <img src={p.avatar_url} className="h-16 w-16 rounded-full border-4 border-gray-50 shadow-md object-cover grayscale hover:grayscale-0 hover:scale-110 transition-all duration-500" alt="p" />
+                                            <span className="text-[7px] font-black uppercase text-gray-400 tracking-tighter truncate w-full text-center text-black">@{p.username || "athlete"}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button onClick={() => setSocialExpand(null)} className="w-full bg-black text-[#d7df22] py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest mt-8 shadow-xl text-black">Close Sector</button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* GYM DETAIL MODAL */}
                     {selectedGym && (
                         <div className="fixed inset-0 z-[400] flex items-end md:items-center justify-center p-0 md:p-8 text-black text-left">
-                            <div className="absolute inset-0 bg-black/85 backdrop-blur-md animate-fade-in" onClick={() => setSelectedGym(null)} />
-                            <div className="relative bg-white w-full max-w-5xl h-[92vh] md:h-full md:max-h-[90vh] rounded-t-[3rem] md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col md:flex-row animate-slide-up">
-                                <button onClick={() => setSelectedGym(null)} className="absolute top-4 right-4 bg-black text-[#d7df22] p-2 rounded-full hover:scale-110 transition-transform z-[500] shadow-2xl"><Icon name="x" size={20} /></button>
-                                <div className="md:w-2/5 relative h-64 md:h-auto shrink-0 bg-gray-100 border-b md:border-b-0 md:border-r border-gray-100 overflow-hidden">
+                            <div className="absolute inset-0 bg-black/85 backdrop-blur-md animate-fade-in text-left" onClick={() => setSelectedGym(null)} />
+                            <div className="relative bg-white w-full max-w-5xl h-[92vh] md:h-full md:max-h-[90vh] rounded-t-[3rem] md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col md:flex-row animate-slide-up text-left">
+                                <button onClick={() => setSelectedGym(null)} className="absolute top-6 right-6 bg-black text-[#d7df22] p-2 rounded-full hover:scale-110 transition-transform z-[500] shadow-2xl text-black"><Icon name="x" size={20} /></button>
+                                <div className="md:w-2/5 relative h-64 md:h-auto shrink-0 bg-gray-100 border-b md:border-b-0 md:border-r border-gray-100 overflow-hidden text-left">
                                     <img src={selectedGym.image_url || "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=800"} className="w-full h-full object-cover" alt="gym" />
-                                    <div className="absolute bottom-6 left-6 flex items-center bg-white/90 backdrop-blur px-5 py-3 rounded-2xl shadow-xl border border-black/5">
-                                        <Icon name="heart" size={20} className="text-red-500 mr-2 fill-red-500" />
-                                        <span className="text-xl font-black italic">{selectedGym.upvotes || 0}</span>
-                                    </div>
+                                    <div className="absolute bottom-6 left-6 flex items-center bg-white/90 backdrop-blur px-5 py-3 rounded-2xl shadow-xl border border-black/5 text-black shadow-inner"><Icon name="heart" size={20} className="text-red-500 mr-2 fill-red-500" /><span className="text-xl font-black italic">{selectedGym.upvotes || 0}</span></div>
                                 </div>
-                                <div className="md:w-3/5 p-8 md:p-12 overflow-y-auto no-scrollbar space-y-10 text-black">
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-4">
-                                            <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter leading-none text-black">{selectedGym.name}</h2>
-                                            <button onClick={() => handleLike(selectedGym.id, selectedGym.upvotes)} className="hover:scale-110 transition-transform active:scale-90 flex items-center gap-1.5"><Icon name="heart" size={18} className="text-red-500 fill-red-500" /><span className="text-[10px] font-black text-gray-400">{selectedGym.upvotes || 0}</span></button>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-gray-400 font-bold uppercase text-[11px] tracking-widest text-left"><Icon name="map-pin" size={14} className="text-red-500"/> {selectedGym.location || selectedGym.city}</div>
-                                    </div>
-                                    <div className="bg-[#d7df22]/5 border-2 border-[#d7df22]/20 p-8 rounded-[2.5rem] space-y-8 shadow-inner text-black">
-                                        <div className="flex items-center gap-3 text-black font-black text-[10px] uppercase tracking-widest"><Icon name="users" size={20} /> Athlete Directory</div>
-                                        <div className="grid grid-cols-1 gap-10">
-                                            <div className="space-y-4">
-                                                <h5 className="text-[8px] font-black uppercase text-gray-400 tracking-widest border-b pb-2 italic">Training Here Now</h5>
-                                                <div className="flex flex-wrap gap-4">
-                                                    {profiles.filter(p => p.current_gym_id == selectedGym.id).map((p, i) => (
-                                                        <img key={i} src={p.avatar_url} className="h-16 w-16 rounded-full border-4 border-white shadow-xl object-cover grayscale hover:grayscale-0 transition-all duration-500" alt="p" />
-                                                    ))}
-                                                    {profiles.filter(p => p.current_gym_id == selectedGym.id).length === 0 && <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest">No public profiles listed.</span>}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-6 text-black">
-                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 pb-2 flex items-center gap-2 italic"><Icon name="trophy" size={14}/> Intelligence intelligence</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6 text-left">
-                                            <MetricBar label="Hygiene Score" value={selectedGym.hygiene_score} icon="shield-check" />
-                                            <MetricBar label="Community Score" value={selectedGym.community_score} icon="target" />
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-4 pt-4">
-                                        <a href={selectedGym.website} target="_blank" className="w-full bg-black text-[#d7df22] py-3 rounded-xl font-black uppercase italic tracking-[0.2em] text-[10px] text-center shadow-lg active:scale-95 transition-all flex items-center justify-center uppercase">Visit Website</a>
-                                    </div>
+                                <div className="md:w-3/5 p-8 md:p-12 overflow-y-auto no-scrollbar space-y-10 text-black text-left">
+                                    <div className="space-y-3 text-black text-left"><div className="flex items-center gap-4 text-black text-left"><h2 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter leading-none text-black text-left">{selectedGym.name}</h2><button onClick={() => handleLike(selectedGym.id, selectedGym.upvotes)} className="hover:scale-110 transition-transform active:scale-90 flex items-center gap-1.5 text-black shadow-inner"><Icon name="heart" size={18} className="text-red-500 fill-red-500 text-black" /><span className="text-[10px] font-black text-gray-400 text-black">{selectedGym.upvotes || 0}</span></button></div><div className="flex items-center gap-2 text-gray-400 font-bold uppercase text-[11px] tracking-widest text-left text-black italic text-left"><Icon name="map-pin" size={14} className="text-red-500 text-black"/> {selectedGym.location || selectedGym.city}</div></div>
+                                    <div className="bg-[#d7df22]/5 border-2 border-[#d7df22]/20 p-8 rounded-[2.5rem] grid grid-cols-3 gap-1 text-center shadow-inner text-black"><div className="border-r border-[#d7df22]/20 space-y-3 hover:bg-black/5 transition-colors cursor-pointer py-2 rounded-xl shadow-inner" onClick={() => setSocialExpand({ gymId: selectedGym.id, category: 'Here Now' })}><p className="text-[8px] font-black text-gray-400 uppercase tracking-widest italic text-black">Here Now</p><AvatarStack gymId={selectedGym.id} size="h-10 w-10" /></div><div className="border-r border-[#d7df22]/20 space-y-3 hover:bg-black/5 transition-colors cursor-pointer py-2 rounded-xl shadow-inner" onClick={() => setSocialExpand({ gymId: selectedGym.id, category: 'Visit Soon' })}><p className="text-[8px] font-black text-gray-400 uppercase tracking-widest italic text-black">Visit Soon</p><span className="text-2xl font-black block text-black">-</span></div><div className="space-y-3 hover:bg-black/5 transition-colors cursor-pointer py-2 rounded-xl shadow-inner" onClick={() => setSocialExpand({ gymId: selectedGym.id, category: 'Was Here' })}><p className="text-[8px] font-black text-gray-400 uppercase tracking-widest italic text-black">Was Here</p><span className="text-2xl font-black block text-black">-</span></div></div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 text-left text-black text-left"><MetricBar label="Hygiene" value={selectedGym.hygiene_score} icon="shield-check" /><MetricBar label="Food Safety" value={selectedGym.food_safety} icon="utensils" /><MetricBar label="English Speaking" value={selectedGym.english_score} icon="languages" /><MetricBar label="Safe for Women" value={selectedGym.safe_for_women} icon="venus" /></div>
+                                    <div className="flex gap-4 pt-4 text-black text-left"><a href={selectedGym.website} target="_blank" className="w-full bg-black text-[#d7df22] py-4 rounded-xl font-black uppercase italic tracking-[0.2em] text-[11px] text-center shadow-lg active:scale-95 transition-all flex items-center justify-center uppercase shadow-inner">Visit Gym Website</a></div>
                                 </div>
                             </div>
                         </div>
