@@ -58,9 +58,8 @@
             const [copied, setCopied] = useState(false);
             const handleCopy = (e) => {
                 e.stopPropagation();
-                const textArea = document.createElement("textarea");
+                const textArea = document.body.appendChild(document.createElement("textarea"));
                 textArea.value = text;
-                document.body.appendChild(textArea);
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
@@ -103,8 +102,10 @@
             const [sponsors, setSponsors] = useState([]);
             const [profiles, setProfiles] = useState([]);
             
+            // Auth State
             const [email, setEmail] = useState("");
             const [password, setPassword] = useState("");
+            const [fullName, setFullName] = useState("");
             const [authError, setAuthError] = useState("");
             const [isLogin, setIsLogin] = useState(true);
 
@@ -139,13 +140,21 @@
                     if (error) setAuthError(error.message);
                     else { setShowPassport(true); setView('gyms'); }
                 } else {
-                    const { data, error } = await supabase.auth.signUp({ email, password });
+                    const { data, error } = await supabase.auth.signUp({ 
+                        email, 
+                        password,
+                        options: { data: { full_name: fullName } }
+                    });
                     if (error) setAuthError(error.message);
                     else {
                         if (data.user) {
-                            await supabase.from('profiles').insert([{ id: data.user.id, full_name: "Athlete", username: email.split('@')[0] }]);
+                            await supabase.from('profiles').insert([{ 
+                                id: data.user.id, 
+                                full_name: fullName || "Athlete", 
+                                username: email.split('@')[0] 
+                            }]);
                         }
-                        setAuthError("Check your email for the activation link!");
+                        setAuthError("Passport Created! Please check your email to confirm activation.");
                         setIsLogin(true);
                     }
                 }
@@ -156,6 +165,13 @@
                 setGyms(gyms.map(g => g.id === gymId ? { ...g, upvotes: newCount } : g));
                 if (selectedGym && selectedGym.id === gymId) setSelectedGym({...selectedGym, upvotes: newCount});
                 await supabase.from('gyms').update({ upvotes: newCount }).eq('id', gymId);
+            };
+
+            const toggleSponsorReveal = (id) => {
+                const newSet = new Set(revealedSponsors);
+                if (newSet.has(id)) newSet.delete(id);
+                else newSet.add(id);
+                setRevealedSponsors(newSet);
             };
 
             const AvatarStack = ({ gymId }) => {
@@ -216,13 +232,13 @@
                     {(view === 'gyms' || view === 'fights') && !showPassport && (
                         <div className="bg-white border-b border-gray-100 py-4 sticky top-16 z-40 px-4 md:px-6 space-y-4 shadow-sm text-left">
                             <div className="max-w-7xl mx-auto space-y-4">
-                                <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
+                                <div className="flex items-center gap-3 overflow-x-auto no-scrollbar text-black">
                                     <Icon name="globe" size={16} className="text-gray-300 shrink-0"/>
                                     {["Where", "Phuket", "Patong", "Perth", "Bangkok", "Austin", "LA"].map(city => (
                                         <button key={city} onClick={() => setActiveCity(city)} className={`whitespace-nowrap px-4 py-2 rounded-xl text-[9px] font-black uppercase border transition-all ${activeCity === city ? 'bg-black text-[#d7df22] border-black shadow-lg' : 'text-gray-400 border-gray-100 bg-white'}`}>{city}</button>
                                     ))}
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3 text-black">
                                     <Icon name="layout-grid" size={16} className="text-gray-300 shrink-0"/>
                                     <div className="flex gap-2 items-center overflow-x-auto no-scrollbar">
                                         {["All", "MMA", "Muay Thai", "BJJ", "Flyweight", "Bantamweight", "Featherweight"].map(type => (
@@ -248,13 +264,36 @@
                             {view === 'auth' && !user && (
                                 <div className="max-w-md mx-auto py-10 text-left">
                                     <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 p-10">
-                                        <h2 className="text-3xl font-black italic uppercase text-black mb-6 leading-none tracking-tighter">{isLogin ? "Athlete Login" : "Create Passport"}</h2>
+                                        <h2 className="text-3xl font-black italic uppercase text-black mb-2 leading-none tracking-tighter">
+                                            {isLogin ? "Athlete Login" : "Create Passport"}
+                                        </h2>
+                                        <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-8">Join the elite combat directory</p>
+                                        
                                         <form onSubmit={handleAuth} className="space-y-4">
-                                            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black" required />
-                                            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black" required />
-                                            {authError && <p className="text-red-500 text-[10px] font-black uppercase tracking-tight">{authError}</p>}
-                                            <button type="submit" className="w-full bg-black text-[#d7df22] py-5 rounded-[1.5rem] font-black uppercase italic shadow-xl active:scale-95 transition-all">{isLogin ? "Enter Dashboard" : "Join the List"}</button>
-                                            <p className="text-center text-[9px] font-black uppercase text-gray-400 cursor-pointer pt-2" onClick={() => setIsLogin(!isLogin)}>{isLogin ? "New here? Register Athlete" : "Already a member? Login"}</p>
+                                            {!isLogin && (
+                                                <div>
+                                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2">Full Name</p>
+                                                    <input type="text" placeholder="Alex Volkanovski" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black" required />
+                                                </div>
+                                            )}
+                                            <div>
+                                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2">Email</p>
+                                                <input type="email" placeholder="athlete@fighterlist.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black" required />
+                                            </div>
+                                            <div>
+                                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-2">Password</p>
+                                                <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black" required />
+                                            </div>
+                                            
+                                            {authError && <p className={`text-[10px] font-black uppercase tracking-tight ${authError.includes('Success') ? 'text-green-500' : 'text-red-500'}`}>{authError}</p>}
+                                            
+                                            <button type="submit" className="w-full bg-black text-[#d7df22] py-5 rounded-[1.5rem] font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all">
+                                                {isLogin ? "Enter Dashboard" : "Join the List"}
+                                            </button>
+                                            
+                                            <p className="text-center text-[9px] font-black uppercase text-gray-400 cursor-pointer pt-2" onClick={() => { setIsLogin(!isLogin); setAuthError(""); }}>
+                                                {isLogin ? "New athlete? Register here" : "Already registered? Login"}
+                                            </p>
                                         </form>
                                     </div>
                                 </div>
@@ -279,7 +318,7 @@
                                                 </div>
                                             </div>
                                             <div className="space-y-6">
-                                                <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b pb-3"><Icon name="globe" className="text-[#d7df22]" size={16}/> Athlete Passport Intelligence</div>
+                                                <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b border-gray-50 pb-3"><Icon name="globe" className="text-[#d7df22]" size={16}/> Athlete Passport Intelligence</div>
                                                 <div className="space-y-4 text-left">
                                                     <div className="flex justify-between items-center py-2 border-b border-gray-50"><span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest">Visited</span><span className="font-black uppercase italic text-sm text-black text-right">{profile.visited_gyms || "None Recorded"}</span></div>
                                                     <div className="flex justify-between items-center py-2 border-b border-gray-50"><span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest">Plan to Visit</span><span className="font-black uppercase italic text-sm text-[#d7df22] text-right">{profile.planned_gyms || "None Recorded"}</span></div>
@@ -303,7 +342,7 @@
                                             <div className="p-8 flex flex-col flex-1 text-black">
                                                 <div className="flex items-center gap-1.5 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-1"><Icon name="map-pin" size={12} className="text-red-500" /> {gym.location || gym.city}</div>
                                                 <div className="flex justify-between items-center mb-6">
-                                                    <h3 className="text-sm font-black italic uppercase text-black leading-tight truncate mr-2">{gym.name}</h3>
+                                                    <h3 className="text-base font-black italic uppercase text-black leading-tight truncate mr-2">{gym.name}</h3>
                                                     <div className="flex items-center gap-1.5 shrink-0">
                                                         <button onClick={(e) => { e.stopPropagation(); handleLike(gym.id, gym.upvotes); }} className="hover:scale-110 transition-transform active:scale-95"><Icon name="heart" size={16} className="text-red-500 fill-red-500" /></button>
                                                         <span className="text-[10px] font-black text-gray-400">{gym.upvotes || 0}</span>
@@ -323,12 +362,12 @@
                                 </div>
                             )}
 
-                            {/* GEAR VIEW (5+1 LOCK) */}
+                            {/* GEAR VIEW (Conditional Box Display) */}
                             {view === 'gear' && (
                                 <div className="space-y-10 text-left text-black">
                                     <h2 className="text-4xl font-black italic uppercase tracking-tighter text-black leading-none">GEAR DISCOUNTS</h2>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                        {gear.slice(0, 5).map((item, i) => (
+                                        {(user ? gear : gear.slice(0, 5)).map((item, i) => (
                                             <div key={i} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between group hover:border-black transition-all text-black h-full">
                                                 <div>
                                                     <span className="bg-[#d7df22] text-black px-4 py-1 rounded-full text-[10px] font-black uppercase mb-6 inline-block border border-black/5 shadow-sm">{item.discount_amount}</span>
@@ -342,7 +381,7 @@
                                                 <button onClick={() => window.open(item.affiliate_url)} className="w-full bg-black text-[#d7df22] py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest mt-auto shadow-lg active:scale-95 transition-all">Get Deal</button>
                                             </div>
                                         ))}
-                                        {!user && (
+                                        {!user && gear.length > 5 && (
                                             <div onClick={() => setView('auth')} className="bg-white border-2 border-dashed border-gray-200 p-8 rounded-[2.5rem] flex flex-col items-center justify-center text-center cursor-pointer hover:border-black transition-all shadow-xl active:scale-95">
                                                 <Icon name="lock" size={40} className="text-black mb-4"/>
                                                 <h4 className="text-xl font-black italic uppercase text-black leading-none mb-2">Register to Unlock</h4>
@@ -354,6 +393,7 @@
                                 </div>
                             )}
 
+                            {/* SPONSORS VIEW (Conditional Box Display) */}
                             {view === 'sponsors' && (
                                 <div className="space-y-10 text-left text-black">
                                     <div className="bg-[#d7df22] p-12 rounded-[3rem] text-black shadow-2xl relative overflow-hidden">
@@ -362,7 +402,7 @@
                                         <p className="max-w-xl font-bold text-sm leading-loose opacity-80 uppercase tracking-widest text-black">Sponsorship is a partnership. Here are the elite brands looking to sponsor active combat athletes.</p>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
-                                        {sponsors.slice(0, 5).map(s => (
+                                        {(user ? sponsors : sponsors.slice(0, 5)).map(s => (
                                             <div key={s.id} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all text-black">
                                                 <div>
                                                     <h3 className="text-xl font-black italic uppercase mb-1 leading-none">{s.brand_name}</h3>
@@ -381,7 +421,7 @@
                                                 </button>
                                             </div>
                                         ))}
-                                        {!user && (
+                                        {!user && sponsors.length > 5 && (
                                             <div onClick={() => setView('auth')} className="bg-white border-2 border-dashed border-gray-200 p-8 rounded-[2.5rem] flex flex-col items-center justify-center text-center cursor-pointer hover:border-black transition-all shadow-xl active:scale-95">
                                                 <Icon name="target" size={40} className="text-black mb-4"/>
                                                 <h4 className="text-xl font-black italic uppercase text-black leading-none mb-2">Unlock More</h4>
@@ -393,6 +433,7 @@
                                 </div>
                             )}
 
+                            {/* FIGHTS VIEW */}
                             {view === 'fights' && (
                                 <div className="max-w-4xl mx-auto space-y-4 text-left text-black">
                                     <h2 className="text-4xl font-black italic uppercase tracking-tighter mb-10 text-black leading-none">Community Updates</h2>
@@ -448,7 +489,6 @@
                         <div className="fixed inset-0 z-[400] flex items-end md:items-center justify-center p-0 md:p-8">
                             <div className="absolute inset-0 bg-black/85 backdrop-blur-md animate-fade-in" onClick={() => setSelectedGym(null)} />
                             <div className="relative bg-white w-full max-w-5xl h-[92vh] md:h-full md:max-h-[90vh] rounded-t-[3rem] md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col md:flex-row animate-slide-up text-left">
-                                {/* Close Button Strictly Top Right */}
                                 <button onClick={() => setSelectedGym(null)} className="absolute top-4 right-4 bg-black text-[#d7df22] p-2 rounded-full hover:scale-110 transition-transform z-[500] shadow-2xl"><Icon name="x" size={20} /></button>
                                 
                                 <div className="md:w-2/5 relative h-64 md:h-auto shrink-0 bg-gray-100 border-b md:border-b-0 md:border-r border-gray-100 overflow-hidden">
@@ -485,8 +525,8 @@
                                         </div>
                                     </div>
 
-                                    <div className="space-y-6">
-                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 pb-2 flex items-center gap-2 text-left text-black"><Icon name="trophy" size={14}/> Community Intelligence</h4>
+                                    <div className="space-y-6 text-black">
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 pb-2 flex items-center gap-2 text-left"><Icon name="trophy" size={14}/> Community Intelligence</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6 text-left">
                                             <MetricBar label="Hygiene Score" value={selectedGym.hygiene_score} icon="shield-check" />
                                             <MetricBar label="Liked by Members" value={selectedGym.liked_by_members} icon="heart" />
