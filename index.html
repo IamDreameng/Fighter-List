@@ -24,6 +24,7 @@
         .animate-slide-up { animation: slideIn 0.3s ease-out; }
         .animate-fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
     </style>
 </head>
 <body class="bg-white text-black selection-brand">
@@ -127,6 +128,14 @@
             const [editCurrentGym, setEditCurrentGym] = useState("");
             const [editPlannedGyms, setEditPlannedGyms] = useState("");
             const [editVisitedGyms, setEditVisitedGyms] = useState("");
+
+            // Dynamic unique cities linking to gym city_country and city data
+            const dynamicCities = useMemo(() => {
+                const gymLocs = gyms.map(g => g.city_country || g.city || g.location).filter(Boolean);
+                const fightLocs = fights.map(f => f.city || f.location).filter(Boolean);
+                const allLocs = [...new Set([...gymLocs, ...fightLocs])].sort();
+                return allLocs;
+            }, [gyms, fights]);
 
             const sortGyms = (data) => {
                 return [...data].sort((a, b) => {
@@ -271,14 +280,18 @@
             }, [user, myProfile.id]);
 
             const filteredGyms = gyms.filter(g => {
-                const matchesCity = activeCity === "Where" || g.city === activeCity || g.location?.includes(activeCity);
-                const matchesType = activeType === "All" || g.disciplines?.includes(activeType);
+                const locationStr = `${g.city} ${g.location} ${g.city_country}`.toLowerCase();
+                const matchesCity = activeCity === "Where" || locationStr.includes(activeCity.toLowerCase());
+                // TYPE LINKS TO DISCIPLINES
+                const matchesType = activeType === "All" || g.disciplines?.toLowerCase().includes(activeType.toLowerCase());
                 return matchesCity && matchesType && g.name.toLowerCase().includes(searchQuery.toLowerCase());
             });
 
             const filteredFights = fights.filter(f => {
-                const matchesCity = activeCity === "Where" || f.city === activeCity;
-                const matchesType = activeType === "All" || f.fight_type?.includes(activeType);
+                const locationStr = `${f.city} ${f.location}`.toLowerCase();
+                const matchesCity = activeCity === "Where" || locationStr.includes(activeCity.toLowerCase());
+                // TYPE LINKS TO FIGHT_TYPE
+                const matchesType = activeType === "All" || f.fight_type?.toLowerCase().includes(activeType.toLowerCase());
                 return matchesCity && matchesType && f.event_name.toLowerCase().includes(searchQuery.toLowerCase());
             });
 
@@ -422,7 +435,63 @@
                         </button>
                     </nav>
 
-                    <main className="w-full px-4 md:px-12 py-8 min-h-[60vh]">
+                    {/* SEARCH & FILTERS BAR */}
+                    {!showPassport && !viewedAthlete && view !== 'auth' && (
+                        <div className="w-full px-4 md:px-12 py-6 flex flex-col md:flex-row gap-4 items-center animate-fade-in">
+                            
+                            {(view === 'gyms' || view === 'fights') && (
+                                <div className="flex gap-2 w-full md:w-auto">
+                                    {/* WHERE FILTER */}
+                                    <div className="relative min-w-[160px] group">
+                                        <Icon name="map-pin" size={14} className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-hover:text-red-500 transition-colors" />
+                                        <select 
+                                            value={activeCity} 
+                                            onChange={(e) => setActiveCity(e.target.value)}
+                                            className="w-full bg-gray-50 border-2 border-transparent hover:border-black p-5 pl-12 pr-10 rounded-full font-black uppercase text-[10px] tracking-widest outline-none cursor-pointer transition-all shadow-inner text-center"
+                                        >
+                                            <option>Where</option>
+                                            {dynamicCities.map(city => (
+                                                <option key={city} value={city}>{city}</option>
+                                            ))}
+                                        </select>
+                                        <Icon name="chevron-down" size={12} className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
+                                    </div>
+
+                                    {/* TYPE FILTER (LINKED TO DISCIPLINES/FIGHT_TYPE) */}
+                                    <div className="relative min-w-[140px] group">
+                                        <Icon name="swords" size={14} className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-hover:text-black transition-colors" />
+                                        <select 
+                                            value={activeType} 
+                                            onChange={(e) => setActiveType(e.target.value)}
+                                            className="w-full bg-gray-50 border-2 border-transparent hover:border-black p-5 pl-12 pr-10 rounded-full font-black uppercase text-[10px] tracking-widest outline-none cursor-pointer transition-all shadow-inner text-center"
+                                        >
+                                            <option>All</option>
+                                            <option>MMA</option>
+                                            <option>Muay Thai</option>
+                                            <option>BJJ</option>
+                                            <option>Boxing</option>
+                                            <option>Wrestling</option>
+                                        </select>
+                                        <Icon name="chevron-down" size={12} className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* SEARCH BAR */}
+                            <div className="relative flex-1 w-full group">
+                                <Icon name="search" size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-black transition-colors" />
+                                <input 
+                                    type="text" 
+                                    placeholder={`Search ${view}...`} 
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-gray-50 border-2 border-transparent focus:border-black focus:bg-white p-5 pl-14 rounded-[2rem] font-bold outline-none transition-all shadow-inner"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <main className="w-full px-4 md:px-12 py-4 min-h-[60vh]">
                         {loading ? (
                             <div className="py-20 text-gray-400 font-black uppercase tracking-[0.3em] animate-pulse italic text-center">Connecting Intelligence...</div>
                         ) : viewedAthlete ? (
@@ -551,7 +620,7 @@
                                                     </div>
                                                 </div>
                                                 <div className="p-8 flex flex-col flex-1 text-black">
-                                                    <div className="flex items-center gap-1.5 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-1 truncate"><Icon name="map-pin" size={12} className="text-red-500" /> {gym.location || gym.city}</div>
+                                                    <div className="flex items-center gap-1.5 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-1 truncate"><Icon name="map-pin" size={12} className="text-red-500" /> {gym.city_country || gym.city || gym.location}</div>
                                                     <h3 className="text-xl font-black italic uppercase leading-tight mb-6 truncate text-black">{gym.name}</h3>
                                                     <div className="grid grid-cols-3 gap-1 py-4 border-y border-gray-50 mb-6 text-center text-black">
                                                         <div className="border-r border-gray-50 space-y-2 hover:bg-gray-50 transition-colors py-1 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); setSocialExpand({ gymId: gym.id, category: 'Here Now' }); }}><p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter leading-none mb-2 italic">Here Now</p><AvatarStack gymId={gym.id} size="h-8 w-8" /></div>
@@ -614,11 +683,11 @@
                                                 <div key={s.id} className="bg-white border-2 border-gray-100 p-10 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all">
                                                     <div className="text-left text-black">
                                                         <h3 className="text-2xl font-black italic uppercase mb-2 leading-none text-black">{s.brand_name}</h3>
-                                                        <p className="text-[#d7df22] font-black uppercase text-[9px] tracking-[0.2em] bg-black inline-block px-4 py-1 rounded-full mb-10 italic">Performance Partner</p>
+                                                        <p className="text-[#d7df22] font-black uppercase text-[9px] tracking-[0.2em] bg-black inline-block px-4 py-1 rounded-full mb-10 italic">{s.focus || "Performance Partner"}</p>
                                                         <div className="space-y-6 mb-10 text-black text-left">
                                                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 text-black shadow-inner text-left">
                                                                 <p className="text-[9px] font-black text-gray-400 uppercase mb-2 tracking-widest italic text-black">Requirement</p>
-                                                                <p className="text-[12px] font-bold leading-relaxed text-black">{s.requirements || "Active status required."}</p>
+                                                                <p className="text-[12px] font-bold leading-relaxed text-black">{s.requirement || "Active status required."}</p>
                                                             </div>
                                                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 text-black shadow-inner text-left">
                                                                 <p className="text-[9px] font-black text-gray-400 uppercase mb-2 tracking-widest italic text-black">Offer</p>
@@ -715,7 +784,7 @@
                                     <div className="absolute bottom-6 left-6 flex items-center bg-white/90 backdrop-blur px-5 py-3 rounded-2xl shadow-xl border border-black/5 text-black shadow-inner"><Icon name="heart" size={20} className="text-red-500 mr-2 fill-red-500 text-black" /><span className="text-xl font-black italic text-black">{selectedGym.upvotes || 0}</span></div>
                                 </div>
                                 <div className="md:w-3/5 p-8 md:p-12 overflow-y-auto no-scrollbar space-y-10 text-black text-left">
-                                    <div className="space-y-3 text-black text-left"><div className="flex items-center gap-4 text-black text-left text-left"><h2 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter leading-none text-black text-left">{selectedGym.name}</h2><button onClick={() => handleLike(selectedGym.id, selectedGym.upvotes)} className="hover:scale-110 transition-transform active:scale-90 flex items-center gap-1.5 text-black shadow-inner"><Icon name="heart" size={18} className="text-red-500 fill-red-500 text-black" /><span className="text-[10px] font-black text-gray-400 text-black">{selectedGym.upvotes || 0}</span></button></div><div className="flex items-center gap-2 text-gray-400 font-bold uppercase text-[11px] tracking-widest text-left text-black italic text-left"><Icon name="map-pin" size={14} className="text-red-500 text-black"/> {selectedGym.location || selectedGym.city}</div></div>
+                                    <div className="space-y-3 text-black text-left"><div className="flex items-center gap-4 text-black text-left text-left"><h2 className="text-xl md:text-3xl font-black italic uppercase tracking-tighter leading-none text-black text-left">{selectedGym.name}</h2><button onClick={() => handleLike(selectedGym.id, selectedGym.upvotes)} className="hover:scale-110 transition-transform active:scale-90 flex items-center gap-1.5 text-black shadow-inner"><Icon name="heart" size={18} className="text-red-500 fill-red-500 text-black" /><span className="text-[10px] font-black text-gray-400 text-black">{selectedGym.upvotes || 0}</span></button></div><div className="flex items-center gap-2 text-gray-400 font-bold uppercase text-[11px] tracking-widest text-left text-black italic text-left"><Icon name="map-pin" size={14} className="text-red-500 text-black"/> {selectedGym.city_country || selectedGym.location || selectedGym.city}</div></div>
                                     <div className="bg-[#d7df22]/5 border-2 border-[#d7df22]/20 p-8 rounded-[2.5rem] grid grid-cols-3 gap-1 text-center shadow-inner text-black"><div className="border-r border-[#d7df22]/20 space-y-3 hover:bg-black/5 transition-colors cursor-pointer py-2 rounded-xl shadow-inner" onClick={() => setSocialExpand({ gymId: selectedGym.id, category: 'Here Now' })}><p className="text-[8px] font-black text-gray-400 uppercase tracking-widest italic text-black">Here Now</p><AvatarStack gymId={selectedGym.id} size="h-10 w-10" /></div><div className="border-r border-[#d7df22]/20 space-y-3 hover:bg-black/5 transition-colors cursor-pointer py-2 rounded-xl shadow-inner" onClick={() => setSocialExpand({ gymId: selectedGym.id, category: 'Visit Soon' })}><p className="text-[8px] font-black text-gray-400 uppercase tracking-widest italic text-black">Visit Soon</p><span className="text-2xl font-black block text-black">-</span></div><div className="space-y-3 hover:bg-black/5 transition-colors cursor-pointer py-2 rounded-xl shadow-inner" onClick={() => setSocialExpand({ gymId: selectedGym.id, category: 'Was Here' })}><p className="text-[8px] font-black text-gray-400 uppercase tracking-widest italic text-black text-black">Was Here</p><span className="text-2xl font-black block text-black">-</span></div></div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 text-left text-black text-left"><MetricBar label="Hygiene" value={selectedGym.hygiene_score} icon="shield-check" /><MetricBar label="Food Safety" value={selectedGym.food_safety} icon="utensils" /><MetricBar label="English Speaking" value={selectedGym.english_score} icon="languages" /><MetricBar label="Safe for Women" value={selectedGym.safe_for_women} icon="venus" /></div>
                                     <div className="flex gap-4 pt-4 text-black text-left"><a href={selectedGym.website} target="_blank" className="w-full bg-black text-[#d7df22] py-4 rounded-xl font-black uppercase italic tracking-[0.2em] text-[11px] text-center shadow-lg active:scale-95 transition-all flex items-center justify-center uppercase shadow-inner">Visit Gym Website</a></div>
