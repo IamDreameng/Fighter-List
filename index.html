@@ -432,7 +432,7 @@
 
                             {/* GYMS VIEW */}
                             {view === 'gyms' && !showPassport && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left max-w-5xl mx-auto">
                                     {filteredGyms.map(gym => (
                                         <div key={gym.id} className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-xl cursor-pointer hover:shadow-2xl transition-all group flex flex-col h-full" onClick={() => setSelectedGym(gym)}>
                                             <div className="relative h-52 overflow-hidden bg-gray-50 shrink-0">
@@ -459,7 +459,7 @@
                             {view === 'gear' && (
                                 <div className="space-y-10 text-left text-black">
                                     <h2 className="text-4xl font-black italic uppercase tracking-tighter text-black leading-none">GEAR DISCOUNTS</h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch max-w-5xl mx-auto">
                                         {(user ? filteredGear : filteredGear.slice(0, 5)).map((item, i) => (
                                             <div key={i} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all text-black h-full">
                                                 <div>
@@ -489,7 +489,7 @@
                                         <h2 className="text-4xl md:text-5xl font-black italic uppercase mb-4 tracking-tighter">Sponsors guide</h2>
                                         <p className="max-w-xl font-bold text-sm leading-loose uppercase tracking-widest opacity-80">Sponsorship is a partnership. Connect with brands dedicated to combat athletes.</p>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch max-w-5xl mx-auto">
                                         {(user ? filteredSponsors : filteredSponsors.slice(0, 5)).map(s => (
                                             <div key={s.id} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all">
                                                 <div>
@@ -617,7 +617,7 @@
                                                 <h5 className="text-[8px] font-black uppercase text-gray-400 tracking-widest border-b pb-2 italic">Training Here Now</h5>
                                                 <div className="flex flex-wrap gap-4">
                                                     {profiles.filter(p => p.current_gym_id == selectedGym.id).map((p, i) => (
-                                                        <img key={i} src={p.avatar_url} className="w-16 h-16 rounded-full border-4 border-white shadow-xl object-cover grayscale hover:grayscale-0 transition-all duration-500" alt="p" />
+                                                        <img key={i} src={p.avatar_url} className="h-16 w-16 rounded-full border-4 border-white shadow-xl object-cover grayscale hover:grayscale-0 transition-all duration-500" alt="p" />
                                                     ))}
                                                     {profiles.filter(p => p.current_gym_id == selectedGym.id).length === 0 && <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest">No public profiles listed.</span>}
                                                 </div>
@@ -625,8 +625,8 @@
                                         </div>
                                     </div>
                                     <div className="space-y-6">
-                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 pb-2 flex items-center gap-2 italic"><Icon name="trophy" size={14}/> Intelligence Intelligence</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 pb-2 flex items-center gap-2 italic"><Icon name="trophy" size={14}/> Intelligence intelligence</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6 text-left">
                                             <MetricBar label="Hygiene Score" value={selectedGym.hygiene_score} icon="shield-check" />
                                             <MetricBar label="Community Score" value={selectedGym.community_score} icon="target" />
                                         </div>
