@@ -30,7 +30,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useMemo } = React;
 
         // --- SUPABASE CONFIG ---
         const SUPABASE_URL = "https://eahymntxxgflqkogdfxs.supabase.co"; 
@@ -287,6 +287,21 @@
                 </div>
             );
 
+            const AdBox = () => (
+                <div className="bg-black rounded-[2.5rem] p-8 flex flex-col justify-between text-left h-full border border-[#d7df22]/30 shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-[#d7df22] opacity-10 rounded-full blur-3xl group-hover:opacity-20 transition-opacity"></div>
+                    <div>
+                        <span className="bg-[#d7df22] text-black text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest mb-4 inline-block">Promoted</span>
+                        <h4 className="text-xl font-black italic uppercase text-white leading-none mb-2 tracking-tighter">REST ROUND™</h4>
+                        <p className="text-[#d7df22] text-[10px] font-black uppercase tracking-[0.2em] mb-6 italic leading-relaxed">High-Performance Hygiene. Engineered for Combat Athletes.</p>
+                        <div className="space-y-4">
+                            <p className="text-gray-400 text-[11px] leading-relaxed">Stop staph and ringworm before they stop your camp. Our HOCL Skin & Gear spray is the elite standard for recovery hygiene.</p>
+                        </div>
+                    </div>
+                    <a href="https://restround.co" target="_blank" className="w-full bg-[#d7df22] text-black py-3 rounded-xl font-black uppercase text-[9px] tracking-[0.2em] text-center shadow-lg transition-all active:scale-95 mt-6 group-hover:bg-white">Shop Rest Round™</a>
+                </div>
+            );
+
             return (
                 <div className="min-h-screen bg-white text-black selection-brand font-['Montserrat']">
                     {/* NAV */}
@@ -322,7 +337,7 @@
                                     {(view === 'gyms' || view === 'fights') && (
                                         <div className="flex gap-2 items-center overflow-x-auto no-scrollbar shrink-0">
                                             <Icon name="layout-grid" size={16} className="text-gray-300 shrink-0"/>
-                                            {["All", "MMA", "Muay Thai", "BJJ", "Flyweight", "Bantamweight"].map(type => (
+                                            {["All", "MMA", "Muay Thai", "BJJ", "Flyweight", "Bantamweight", "Featherweight"].map(type => (
                                                 <button key={type} onClick={() => setActiveType(type)} className={`whitespace-nowrap px-4 py-2 rounded-xl text-[9px] font-black uppercase border transition-all ${activeType === type ? 'bg-[#d7df22] text-black border-black shadow-lg' : 'text-gray-400 border-gray-100 bg-white'}`}>{type}</button>
                                             ))}
                                         </div>
@@ -432,26 +447,36 @@
 
                             {/* GYMS VIEW */}
                             {view === 'gyms' && !showPassport && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left max-w-5xl mx-auto">
-                                    {filteredGyms.map(gym => (
-                                        <div key={gym.id} className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-xl cursor-pointer hover:shadow-2xl transition-all group flex flex-col h-full" onClick={() => setSelectedGym(gym)}>
-                                            <div className="relative h-52 overflow-hidden bg-gray-50 shrink-0">
-                                                <img src={gym.image_url || "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=800"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="gym" />
-                                                <div className="absolute top-4 left-4 flex gap-1">
-                                                    {gym.name?.toLowerCase().includes("bangtao") && <span className="bg-[#d7df22] text-black text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest shadow-lg">Featured</span>}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
+                                    {filteredGyms.map((gym, idx) => {
+                                        // Insert AD at position 4 (index 3) on the first line
+                                        const elements = [];
+                                        if (idx === 3) {
+                                            elements.push(<AdBox key="ad-box" />);
+                                        }
+                                        elements.push(
+                                            <div key={gym.id} className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-xl cursor-pointer hover:shadow-2xl transition-all group flex flex-col h-full" onClick={() => setSelectedGym(gym)}>
+                                                <div className="relative h-52 overflow-hidden bg-gray-50 shrink-0">
+                                                    <img src={gym.image_url || "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=800"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="gym" />
+                                                    <div className="absolute top-4 left-4 flex gap-1">
+                                                        {gym.name?.toLowerCase().includes("bangtao") && <span className="bg-[#d7df22] text-black text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest shadow-lg">Featured</span>}
+                                                    </div>
+                                                </div>
+                                                <div className="p-8 flex flex-col flex-1">
+                                                    <div className="flex items-center gap-1.5 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-1"><Icon name="map-pin" size={12} className="text-red-500" /> {gym.location || gym.city}</div>
+                                                    <h3 className="text-base font-black italic uppercase leading-tight truncate mb-6">{gym.name}</h3>
+                                                    <div className="grid grid-cols-2 gap-1 py-4 border-y border-gray-50 mt-auto text-center">
+                                                        <div className="border-r border-gray-50"><p className="text-[7px] font-black text-gray-300 uppercase leading-none mb-2 tracking-tighter">Rating</p><span className="text-[10px] font-black">{gym.community_score || 0}%</span></div>
+                                                        <div><p className="text-[7px] font-black text-gray-300 uppercase leading-none mb-2 tracking-tighter">Votes</p><span className="text-[10px] font-black">{gym.upvotes || 0}</span></div>
+                                                    </div>
+                                                    <button className="w-full bg-black text-[#d7df22] py-2.5 rounded-xl font-black uppercase text-[8px] tracking-[0.2em] shadow-md mt-4">Details</button>
                                                 </div>
                                             </div>
-                                            <div className="p-8 flex flex-col flex-1">
-                                                <div className="flex items-center gap-1.5 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-1"><Icon name="map-pin" size={12} className="text-red-500" /> {gym.location || gym.city}</div>
-                                                <h3 className="text-base font-black italic uppercase leading-tight truncate mb-6">{gym.name}</h3>
-                                                <div className="grid grid-cols-3 gap-1 py-4 border-y border-gray-50 mt-auto text-center">
-                                                    <div className="border-r border-gray-50"><p className="text-[7px] font-black text-gray-300 uppercase leading-none mb-2 tracking-tighter">Rating</p><span className="text-[10px] font-black">{gym.community_score || 0}%</span></div>
-                                                    <div><p className="text-[7px] font-black text-gray-300 uppercase leading-none mb-2 tracking-tighter">Votes</p><span className="text-[10px] font-black">{gym.upvotes || 0}</span></div>
-                                                </div>
-                                                <button className="w-full bg-black text-[#d7df22] py-2.5 rounded-xl font-black uppercase text-[8px] tracking-[0.2em] shadow-md mt-4">Details</button>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                        return elements;
+                                    })}
+                                    {/* Handle case where less than 4 gyms exist but we want the ad */}
+                                    {filteredGyms.length < 4 && <AdBox key="ad-box-fallback" />}
                                 </div>
                             )}
 
@@ -459,7 +484,7 @@
                             {view === 'gear' && (
                                 <div className="space-y-10 text-left text-black">
                                     <h2 className="text-4xl font-black italic uppercase tracking-tighter text-black leading-none">GEAR DISCOUNTS</h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch max-w-5xl mx-auto">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
                                         {(user ? filteredGear : filteredGear.slice(0, 5)).map((item, i) => (
                                             <div key={i} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all text-black h-full">
                                                 <div>
@@ -486,10 +511,10 @@
                                 <div className="space-y-10 text-left text-black">
                                     <div className="bg-[#d7df22] p-12 rounded-[3rem] text-black shadow-2xl relative overflow-hidden">
                                         <div className="absolute right-[-5%] top-[-10%] opacity-10 rotate-12"><Icon name="target" size={200} /></div>
-                                        <h2 className="text-4xl md:text-5xl font-black italic uppercase mb-4 tracking-tighter">Sponsors guide</h2>
+                                        <h2 className="text-4xl md:text-5xl font-black italic uppercase mb-4 tracking-tighter leading-none">Sponsors guide</h2>
                                         <p className="max-w-xl font-bold text-sm leading-loose uppercase tracking-widest opacity-80">Sponsorship is a partnership. Connect with brands dedicated to combat athletes.</p>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch max-w-5xl mx-auto">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
                                         {(user ? filteredSponsors : filteredSponsors.slice(0, 5)).map(s => (
                                             <div key={s.id} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all">
                                                 <div>
@@ -522,7 +547,7 @@
                             {/* FIGHTS VIEW */}
                             {view === 'fights' && (
                                 <div className="max-w-4xl mx-auto space-y-4 text-left text-black">
-                                    <h2 className="text-4xl font-black italic uppercase mb-10 tracking-tighter">Community Updates</h2>
+                                    <h2 className="text-4xl font-black italic uppercase mb-10 tracking-tighter leading-none">Community Updates</h2>
                                     <div className="grid grid-cols-1 gap-3">
                                         {(user ? filteredFights : filteredFights.slice(0, 5)).map(f => (
                                             <div key={f.id} className="bg-white border-2 border-black p-4 rounded-2xl flex flex-col shadow-md relative group animate-fade-in">
@@ -605,7 +630,7 @@
                                 <div className="md:w-3/5 p-8 md:p-12 overflow-y-auto no-scrollbar space-y-10 text-black text-left">
                                     <div className="space-y-3">
                                         <div className="flex items-center gap-4">
-                                            <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter">{selectedGym.name}</h2>
+                                            <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter leading-none">{selectedGym.name}</h2>
                                             <button onClick={() => handleLike(selectedGym.id, selectedGym.upvotes)} className="hover:scale-110 transition-transform active:scale-90 flex items-center gap-1.5"><Icon name="heart" size={18} className="text-red-500 fill-red-500" /><span className="text-[10px] font-black text-gray-400">{selectedGym.upvotes || 0}</span></button>
                                         </div>
                                         <div className="flex items-center gap-2 text-gray-400 font-bold uppercase text-[11px] tracking-widest"><Icon name="map-pin" size={14} className="text-red-500"/> {selectedGym.location || selectedGym.city}</div>
