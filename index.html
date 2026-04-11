@@ -292,8 +292,6 @@
                 s.focus?.toLowerCase().includes(searchQuery.toLowerCase())
             );
 
-            const isPublicView = ['gyms', 'fights', 'gear', 'sponsors'].includes(view);
-
             const handleShare = (platform, fight) => {
                 const url = window.location.href;
                 const text = `Check out ${fight.event_name} in ${fight.city} on Fighter List!`;
@@ -407,14 +405,14 @@
                                     <text x="50%" y="82%" textAnchor="middle" fill="#d7df22" fontFamily="Arial Black, sans-serif" fontSize="36" fontWeight="900" style={{letterSpacing: '-1.5px'}}>LIST</text>
                                 </svg>
                             </div>
-                            <div className="hidden lg:block text-xl md:text-2xl font-black italic uppercase tracking-tighter group-hover:text-[#d7df22] transition-colors leading-none">
+                            <div className="text-xl md:text-2xl font-black italic uppercase tracking-tighter group-hover:text-[#d7df22] transition-colors leading-none">
                                 FIGHTER LIST
                             </div>
                         </div>
 
                         <div className="flex gap-1 md:gap-2 bg-gray-50 p-1 rounded-full shadow-inner border border-gray-100">
                             {['gyms', 'fights', 'gear', 'sponsors'].map(id => (
-                                <button key={id} onClick={() => {setView(id); setShowPassport(false); setViewedAthlete(null);}} className={`flex items-center gap-2 px-4 md:px-5 py-2 rounded-full text-[9px] md:text-[10px] font-black uppercase transition-all ${view === id && !showPassport ? 'bg-black text-[#d7df22] shadow-lg' : 'text-gray-400'}`}>
+                                <button key={id} onClick={() => {setView(id); setShowPassport(false); setViewedAthlete(null);}} className={`flex items-center gap-2 px-3 md:px-5 py-2 rounded-full text-[9px] md:text-[10px] font-black uppercase transition-all ${view === id && !showPassport ? 'bg-black text-[#d7df22] shadow-lg' : 'text-gray-400'}`}>
                                     <Icon name={id==='gyms'?'map-pin':id==='fights'?'swords':id==='gear'?'shopping-bag':'target'} size={14} /> <span className="hidden sm:inline">{id.charAt(0).toUpperCase() + id.slice(1)}</span>
                                 </button>
                             ))}
@@ -434,21 +432,13 @@
                                     <Icon name="arrow-left" size={16} /> Return to Intelligence Feed
                                 </button>
                                 <div className="bg-white rounded-[3rem] overflow-hidden shadow-2xl border border-gray-100">
-                                    <div className="bg-black p-12 text-center relative">
+                                    <div className="bg-black p-12 text-center relative text-white">
                                         <img src={viewedAthlete.avatar_url} className="w-40 h-40 rounded-full border-4 border-[#d7df22] mx-auto mb-8 object-cover bg-gray-900 shadow-2xl" alt="Athlete" />
                                         <h2 className="text-4xl font-black italic uppercase text-white tracking-tighter leading-none">{viewedAthlete.full_name}</h2>
                                         <a href={`https://instagram.com/${viewedAthlete.username}`} target="_blank" className="text-[#d7df22] text-[10px] font-black uppercase tracking-[0.4em] mt-4 bg-white/10 px-6 py-2 rounded-full inline-block italic hover:bg-[#d7df22] hover:text-black transition-all">@{viewedAthlete.username || "athlete"}</a>
                                     </div>
                                     <div className="p-12 space-y-12 bg-white text-black text-left">
                                         <ProfileSection title="Home Gym Base" content={viewedAthlete.home_gym} icon="home" />
-                                        <div className="space-y-6 text-left">
-                                            <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b border-gray-50 pb-3 text-left"><Icon name="globe" className="text-[#d7df22]" size={16}/> Athlete Community Status</div>
-                                            <div className="space-y-4 text-left">
-                                                <div className="flex justify-between items-center py-4 border-b border-gray-50"><span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest">Here Now</span><span className="font-black uppercase italic text-sm text-[#d7df22] text-right"><GymLink name={viewedAthlete.current_gym || "Not Active"} /></span></div>
-                                                <div className="flex justify-between items-center py-4 border-b border-gray-50"><span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest">Visit Soon</span><span className="font-black uppercase italic text-sm text-black text-right"><GymLink name={viewedAthlete.planned_gyms || "None Recorded"} /></span></div>
-                                                <div className="flex justify-between items-center py-4 border-b border-gray-50"><span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest">Was Here</span><span className="font-black uppercase italic text-sm text-black text-right"><GymLink name={viewedAthlete.visited_gyms || "None Recorded"} /></span></div>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -500,7 +490,7 @@
                             {showPassport && user && (
                                 <div className="max-w-2xl mx-auto py-10 text-left animate-slide-up text-black">
                                     <div className="bg-white rounded-[3rem] overflow-hidden shadow-2xl border border-gray-100">
-                                        <div className="bg-black p-12 text-center relative text-black text-white">
+                                        <div className="bg-black p-12 text-center relative text-white">
                                             <button onClick={() => {supabase.auth.signOut(); setShowPassport(false);}} className="absolute top-6 right-6 text-[#d7df22] hover:text-white transition-colors">
                                                 <Icon name="log-out" size={18} />
                                             </button>
@@ -510,9 +500,22 @@
                                         </div>
                                         <div className="p-12 space-y-12 bg-white text-black text-left">
                                             <div className="space-y-4 text-left">
-                                                <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b pb-3 text-left text-black"><Icon name="home" className="text-[#d7df22]" size={16}/> Athlete Home Base</div>
+                                                <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b pb-3 text-left text-black"><Icon name="home" className="text-[#d7df22]" size={16}/> Home Gym Dossier</div>
                                                 {isEditingProfile ? (
-                                                    <input type="text" value={editHomeGym} onChange={(e) => setEditHomeGym(e.target.value)} placeholder="Home Gym Name" className="w-full bg-gray-50 p-6 rounded-[2rem] border-2 border-black outline-none font-black uppercase italic text-xl text-black shadow-inner" />
+                                                    <div className="space-y-6">
+                                                        <div className="space-y-2">
+                                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-4">Home Gym</p>
+                                                            <input type="text" value={editHomeGym} onChange={(e) => setEditHomeGym(e.target.value)} placeholder="Home Gym Name" className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 outline-none font-black uppercase italic text-sm text-black shadow-inner" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-4">Here Now</p>
+                                                            <input type="text" value={editCurrentGym} onChange={(e) => setEditCurrentGym(e.target.value)} placeholder="Live Gym Name" className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 outline-none font-black uppercase italic text-sm text-black shadow-inner" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-4">Visit Soon</p>
+                                                            <input type="text" value={editPlannedGyms} onChange={(e) => setEditPlannedGyms(e.target.value)} placeholder="Planned Gym Name" className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 outline-none font-black uppercase italic text-sm text-black shadow-inner" />
+                                                        </div>
+                                                    </div>
                                                 ) : (
                                                     <div className="bg-black p-8 rounded-[2.5rem] border-2 border-[#d7df22]/20 flex justify-between items-center shadow-2xl text-left">
                                                         <div className="text-white text-left"><p className="text-[9px] font-black text-[#d7df22] uppercase mb-1 italic text-left">Current Base</p><h4 className="text-2xl font-black uppercase italic leading-none"><GymLink name={myProfile.home_gym || "Not Set"} /></h4></div>
@@ -520,43 +523,12 @@
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="space-y-6 text-left">
-                                                <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b border-gray-50 pb-3 text-left text-black"><Icon name="globe" className="text-[#d7df22]" size={16}/> Athlete Community Status</div>
-                                                <div className="space-y-4 text-black text-left">
-                                                    {/* Here Now */}
-                                                    <div className="flex justify-between items-center py-4 border-b border-gray-50 text-black">
-                                                        <span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest text-left">Here Now</span>
-                                                        {isEditingProfile ? (
-                                                            <input type="text" value={editCurrentGym} onChange={(e) => setEditCurrentGym(e.target.value)} placeholder="Live Gym Name" className="bg-gray-50 p-2 rounded-xl border border-black outline-none font-black uppercase italic text-xs text-right text-black shadow-inner" />
-                                                        ) : (
-                                                            <span className="font-black uppercase italic text-sm text-[#d7df22] text-right"><GymLink name={myProfile.current_gym || "Not Active"} /></span>
-                                                        )}
-                                                    </div>
-                                                    {/* Visit Soon */}
-                                                    <div className="flex justify-between items-center py-4 border-b border-gray-50">
-                                                        <span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest text-left">Visit Soon</span>
-                                                        {isEditingProfile ? (
-                                                            <input type="text" value={editPlannedGyms} onChange={(e) => setEditPlannedGyms(e.target.value)} placeholder="Planned Gym Name" className="bg-gray-50 p-2 rounded-xl border border-black outline-none font-black uppercase italic text-xs text-right text-black shadow-inner" />
-                                                        ) : (
-                                                            <span className="font-black uppercase italic text-sm text-black text-right"><GymLink name={myProfile.planned_gyms || "None Recorded"} /></span>
-                                                        )}
-                                                    </div>
-                                                    {/* Was Here */}
-                                                    <div className="flex justify-between items-center py-4 border-b border-gray-50 text-black">
-                                                        <span className="text-[11px] font-bold uppercase text-gray-400 tracking-widest text-left">Was Here</span>
-                                                        {isEditingProfile ? (
-                                                            <input type="text" value={editVisitedGyms} onChange={(e) => setEditVisitedGyms(e.target.value)} placeholder="Visited Gyms" className="bg-gray-50 p-2 rounded-xl border border-black outline-none font-black uppercase italic text-xs text-right text-black shadow-inner" />
-                                                        ) : (
-                                                            <span className="font-black uppercase italic text-sm text-black text-right"><GymLink name={myProfile.visited_gyms || "None Recorded"} /></span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            
                                             <div className="flex gap-4">
                                                 {isEditingProfile ? (
-                                                    <button onClick={handleUpdateProfile} className="flex-1 bg-black text-[#d7df22] py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest flex items-center justify-center gap-3 shadow-2xl">Save Changes</button>
+                                                    <button onClick={handleUpdateProfile} className="flex-1 bg-black text-[#d7df22] py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest flex items-center justify-center gap-3 shadow-2xl">Save Dossier Changes</button>
                                                 ) : (
-                                                    <button onClick={() => setIsEditingProfile(true)} className="w-full bg-black text-white py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all text-white"><Icon name="settings" size={18}/> Manage Athlete Passport</button>
+                                                    <button onClick={() => setIsEditingProfile(true)} className="w-full bg-black text-white py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all text-white"><Icon name="settings" size={18}/> Manage Athlete Dossier</button>
                                                 )}
                                             </div>
                                         </div>
