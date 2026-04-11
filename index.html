@@ -163,7 +163,6 @@
             const handleAuth = async (e) => {
                 e.preventDefault();
                 setAuthError("");
-                
                 if (isLogin) {
                     const { error } = await supabase.auth.signInWithPassword({ email, password });
                     if (error) setAuthError(error.message);
@@ -229,6 +228,18 @@
 
             const toggleShareMenu = (id) => {
                 setShareMenuFightId(shareMenuFightId === id ? null : id);
+            };
+
+            const AvatarStack = ({ gymId }) => {
+                const attendees = profiles.filter(p => p.current_gym_id == gymId).slice(0, 3);
+                return (
+                    <div className="flex -space-x-1.5 overflow-hidden justify-center items-center h-4">
+                        {attendees.map((p, i) => (
+                            <img key={i} src={p.avatar_url} className="inline-block h-3.5 w-3.5 rounded-full ring-1 ring-white object-cover grayscale" alt="user" />
+                        ))}
+                        {attendees.length === 0 && <span className="text-[10px] text-gray-200 font-black">-</span>}
+                    </div>
+                );
             };
 
             const profile = profiles.find(p => p.id === user?.id) || {
@@ -305,7 +316,7 @@
             return (
                 <div className="min-h-screen bg-white text-black selection-brand font-['Montserrat']">
                     {/* NAV */}
-                    <nav className="sticky top-0 z-[100] bg-white border-b border-gray-100 h-16 flex items-center justify-between px-4 md:px-6">
+                    <nav className="sticky top-0 z-[100] bg-white border-b border-gray-100 h-16 flex items-center justify-between px-4 md:px-12">
                         <div className="text-xl md:text-2xl font-black italic uppercase tracking-tighter cursor-pointer hover:text-[#d7df22] transition-colors" onClick={() => {setView('gyms'); setShowPassport(false);}}>
                             FIGHTER LIST
                         </div>
@@ -323,8 +334,8 @@
 
                     {/* FILTER STRIP */}
                     {isPublicView && !showPassport && (
-                        <div className="bg-white border-b border-gray-100 py-4 sticky top-16 z-40 px-4 md:px-6 space-y-4 shadow-sm text-left">
-                            <div className="max-w-7xl mx-auto space-y-4">
+                        <div className="bg-white border-b border-gray-100 py-4 sticky top-16 z-40 px-4 md:px-12 space-y-4 shadow-sm text-left">
+                            <div className="w-full space-y-4">
                                 {(view === 'gyms' || view === 'fights') && (
                                     <div className="flex items-center gap-3 overflow-x-auto no-scrollbar text-black">
                                         <Icon name="globe" size={16} className="text-[#d7df22] shrink-0"/>
@@ -351,7 +362,7 @@
                         </div>
                     )}
 
-                    <main className="max-w-7xl mx-auto px-4 py-8 min-h-[60vh]">
+                    <main className="w-full px-4 md:px-12 py-8 min-h-[60vh]">
                         {loading ? (
                             <div className="py-20 text-gray-400 font-black uppercase tracking-[0.3em] animate-pulse italic text-center">Connecting Intelligence...</div>
                         ) : (
@@ -447,35 +458,46 @@
 
                             {/* GYMS VIEW */}
                             {view === 'gyms' && !showPassport && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left w-full">
                                     {filteredGyms.map((gym, idx) => {
-                                        // Insert AD at position 4 (index 3) on the first line
                                         const elements = [];
                                         if (idx === 3) {
                                             elements.push(<AdBox key="ad-box" />);
                                         }
                                         elements.push(
                                             <div key={gym.id} className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-xl cursor-pointer hover:shadow-2xl transition-all group flex flex-col h-full" onClick={() => setSelectedGym(gym)}>
-                                                <div className="relative h-52 overflow-hidden bg-gray-50 shrink-0">
+                                                <div className="relative h-48 overflow-hidden bg-gray-50 shrink-0">
                                                     <img src={gym.image_url || "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=800"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="gym" />
                                                     <div className="absolute top-4 left-4 flex gap-1">
                                                         {gym.name?.toLowerCase().includes("bangtao") && <span className="bg-[#d7df22] text-black text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest shadow-lg">Featured</span>}
                                                     </div>
                                                 </div>
-                                                <div className="p-8 flex flex-col flex-1">
-                                                    <div className="flex items-center gap-1.5 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-1"><Icon name="map-pin" size={12} className="text-red-500" /> {gym.location || gym.city}</div>
-                                                    <h3 className="text-base font-black italic uppercase leading-tight truncate mb-6">{gym.name}</h3>
-                                                    <div className="grid grid-cols-2 gap-1 py-4 border-y border-gray-50 mt-auto text-center">
-                                                        <div className="border-r border-gray-50"><p className="text-[7px] font-black text-gray-300 uppercase leading-none mb-2 tracking-tighter">Rating</p><span className="text-[10px] font-black">{gym.community_score || 0}%</span></div>
-                                                        <div><p className="text-[7px] font-black text-gray-300 uppercase leading-none mb-2 tracking-tighter">Votes</p><span className="text-[10px] font-black">{gym.upvotes || 0}</span></div>
+                                                <div className="p-6 flex flex-col flex-1">
+                                                    <div className="flex items-center gap-1 text-gray-400 font-bold uppercase text-[8px] tracking-widest mb-1 truncate"><Icon name="map-pin" size={10} className="text-red-500" /> {gym.location || gym.city}</div>
+                                                    <h3 className="text-sm font-black italic uppercase leading-tight mb-4 truncate">{gym.name}</h3>
+                                                    
+                                                    {/* SOCIAL STATUS BOX */}
+                                                    <div className="grid grid-cols-3 gap-1 py-3 border-y border-gray-50 mb-4 text-center">
+                                                        <div className="border-r border-gray-50 space-y-1">
+                                                            <p className="text-[6px] font-black text-gray-400 uppercase tracking-tighter leading-none">Here Now</p>
+                                                            <AvatarStack gymId={gym.id} />
+                                                        </div>
+                                                        <div className="border-r border-gray-50 space-y-1">
+                                                            <p className="text-[6px] font-black text-gray-400 uppercase tracking-tighter leading-none">Was Here</p>
+                                                            <span className="text-[10px] font-black leading-none block">-</span>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <p className="text-[6px] font-black text-gray-400 uppercase tracking-tighter leading-none">Visit Soon</p>
+                                                            <span className="text-[10px] font-black leading-none block">-</span>
+                                                        </div>
                                                     </div>
-                                                    <button className="w-full bg-black text-[#d7df22] py-2.5 rounded-xl font-black uppercase text-[8px] tracking-[0.2em] shadow-md mt-4">Details</button>
+
+                                                    <button className="w-full bg-black text-[#d7df22] py-2 rounded-xl font-black uppercase text-[8px] tracking-[0.2em] shadow-md mt-auto">Details</button>
                                                 </div>
                                             </div>
                                         );
                                         return elements;
                                     })}
-                                    {/* Handle case where less than 4 gyms exist but we want the ad */}
                                     {filteredGyms.length < 4 && <AdBox key="ad-box-fallback" />}
                                 </div>
                             )}
@@ -484,14 +506,14 @@
                             {view === 'gear' && (
                                 <div className="space-y-10 text-left text-black">
                                     <h2 className="text-4xl font-black italic uppercase tracking-tighter text-black leading-none">GEAR DISCOUNTS</h2>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch w-full">
                                         {(user ? filteredGear : filteredGear.slice(0, 5)).map((item, i) => (
                                             <div key={i} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all text-black h-full">
                                                 <div>
                                                     <span className="bg-[#d7df22] text-black px-4 py-1 rounded-full text-[10px] font-black uppercase mb-6 inline-block border border-black/5 shadow-sm">{item.discount_amount}</span>
                                                     <p className="text-[9px] font-black text-gray-400 uppercase mb-1 tracking-widest">{item.brand_name}</p>
                                                     <h4 className="text-lg font-black italic uppercase mb-6 leading-tight">{item.product_name}</h4>
-                                                    <div className="bg-gray-50 p-4 rounded-2xl border-2 border-dashed border-gray-100 flex justify-between items-center mb-6 font-mono font-black text-lg">
+                                                    <div className="bg-gray-50 p-4 rounded-2xl border-2 border-dashed border-gray-100 flex justify-between items-center mb-6 font-mono font-black text-lg text-black">
                                                         <span>{item.discount_code}</span>
                                                         <CopyButton text={item.discount_code} showText={true} />
                                                     </div>
@@ -512,9 +534,9 @@
                                     <div className="bg-[#d7df22] p-12 rounded-[3rem] text-black shadow-2xl relative overflow-hidden">
                                         <div className="absolute right-[-5%] top-[-10%] opacity-10 rotate-12"><Icon name="target" size={200} /></div>
                                         <h2 className="text-4xl md:text-5xl font-black italic uppercase mb-4 tracking-tighter leading-none">Sponsors guide</h2>
-                                        <p className="max-w-xl font-bold text-sm leading-loose uppercase tracking-widest opacity-80">Sponsorship is a partnership. Connect with brands dedicated to combat athletes.</p>
+                                        <p className="max-w-xl font-bold text-sm leading-loose uppercase tracking-widest opacity-80 text-black">Sponsorship is a partnership. Connect with brands dedicated to combat athletes.</p>
                                     </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch w-full">
                                         {(user ? filteredSponsors : filteredSponsors.slice(0, 5)).map(s => (
                                             <div key={s.id} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all">
                                                 <div>
@@ -546,19 +568,19 @@
 
                             {/* FIGHTS VIEW */}
                             {view === 'fights' && (
-                                <div className="max-w-4xl mx-auto space-y-4 text-left text-black">
+                                <div className="max-w-5xl mx-auto space-y-4 text-left text-black">
                                     <h2 className="text-4xl font-black italic uppercase mb-10 tracking-tighter leading-none">Community Updates</h2>
                                     <div className="grid grid-cols-1 gap-3">
                                         {(user ? filteredFights : filteredFights.slice(0, 5)).map(f => (
-                                            <div key={f.id} className="bg-white border-2 border-black p-4 rounded-2xl flex flex-col shadow-md relative group animate-fade-in">
+                                            <div key={f.id} className="bg-white border-2 border-black p-4 rounded-2xl flex flex-col shadow-md relative group animate-fade-in text-black">
                                                 <div className="flex items-center justify-between gap-4">
-                                                    <div className="flex items-center gap-4 flex-1">
-                                                        <div className="bg-gray-50 p-2 rounded-xl text-center min-w-[65px] border border-gray-100 shadow-inner shrink-0">
+                                                    <div className="flex items-center gap-4 flex-1 text-black">
+                                                        <div className="bg-gray-50 p-2 rounded-xl text-center min-w-[65px] border border-gray-100 shadow-inner shrink-0 text-black">
                                                             <p className="text-lg font-black italic tracking-tighter">{f.event_date?.split(' ')[1] || "TBD"}</p>
                                                         </div>
                                                         <div className="text-left space-y-0.5 overflow-hidden pr-2">
                                                             <span className="bg-[#d7df22] text-black px-2 py-0.2 rounded-full text-[7px] font-black uppercase tracking-widest">{f.fight_type}</span>
-                                                            <h3 className="text-sm md:text-base font-black italic uppercase leading-tight tracking-tighter truncate">{f.event_name}</h3>
+                                                            <h3 className="text-sm md:text-base font-black italic uppercase leading-tight tracking-tighter truncate text-black">{f.event_name}</h3>
                                                             <p className="text-gray-400 font-bold uppercase text-[8px] flex items-center gap-1 tracking-widest italic leading-none"><Icon name="map-pin" size={10} className="text-red-500" /> {f.city}</p>
                                                         </div>
                                                     </div>
@@ -582,13 +604,14 @@
                                                             <button onClick={() => handleShare('fb', f)} className="hover:text-blue-600 transition-colors"><FBIcon size={16} /></button>
                                                             <button onClick={() => handleShare('wa', f)} className="hover:text-green-600 transition-colors"><WhatsAppIcon size={16} /></button>
                                                         </div>
-                                                        <button onClick={() => setShareMenuFightId(null)} className="ml-auto text-gray-300 hover:text-red-500 transition-colors px-2"><Icon name="x" size={14}/></button>
+                                                        <button onClick={() => setShareMenuFightId(null)} className="ml-auto text-gray-300 hover:text-red-500 transition-colors px-2 text-black"><Icon name="x" size={14}/></button>
                                                     </div>
                                                 )}
                                             </div>
                                         ))}
                                         {!user && filteredFights.length >= 5 && <RegisterCTA fullWidth title="Unlock More Fights" text="Gain access to the full matchmaking intelligence feed" />}
                                     </div>
+                                    {filteredFights.length === 0 && <div className="py-20 text-center text-gray-400 font-black uppercase tracking-widest italic">No fights match your search</div>}
                                 </div>
                             )}
                           </div>
@@ -597,7 +620,7 @@
 
                     {/* FOOTER */}
                     <footer className="bg-white py-12 border-t border-gray-100 text-black">
-                        <div className="max-w-7xl mx-auto px-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-[10px] font-black uppercase tracking-[0.2em] italic whitespace-nowrap">
+                        <div className="w-full px-4 md:px-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-[10px] font-black uppercase tracking-[0.2em] italic whitespace-nowrap">
                             <div className="flex items-center gap-4 text-black">
                                 <a href="https://instagram.com/fighterlist_com" target="_blank" className="hover:scale-110 transition-transform active:scale-90"><InstagramIcon size={16}/></a>
                                 <a href="https://wa.me/66924692066" target="_blank" className="hover:scale-110 transition-transform active:scale-90"><WhatsAppIcon size={16}/></a>
@@ -616,9 +639,9 @@
 
                     {/* GYM DETAIL MODAL */}
                     {selectedGym && (
-                        <div className="fixed inset-0 z-[400] flex items-end md:items-center justify-center p-0 md:p-8">
+                        <div className="fixed inset-0 z-[400] flex items-end md:items-center justify-center p-0 md:p-8 text-black text-left">
                             <div className="absolute inset-0 bg-black/85 backdrop-blur-md animate-fade-in" onClick={() => setSelectedGym(null)} />
-                            <div className="relative bg-white w-full max-w-5xl h-[92vh] md:h-full md:max-h-[90vh] rounded-t-[3rem] md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col md:flex-row animate-slide-up text-left">
+                            <div className="relative bg-white w-full max-w-5xl h-[92vh] md:h-full md:max-h-[90vh] rounded-t-[3rem] md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col md:flex-row animate-slide-up">
                                 <button onClick={() => setSelectedGym(null)} className="absolute top-4 right-4 bg-black text-[#d7df22] p-2 rounded-full hover:scale-110 transition-transform z-[500] shadow-2xl"><Icon name="x" size={20} /></button>
                                 <div className="md:w-2/5 relative h-64 md:h-auto shrink-0 bg-gray-100 border-b md:border-b-0 md:border-r border-gray-100 overflow-hidden">
                                     <img src={selectedGym.image_url || "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=800"} className="w-full h-full object-cover" alt="gym" />
@@ -627,15 +650,15 @@
                                         <span className="text-xl font-black italic">{selectedGym.upvotes || 0}</span>
                                     </div>
                                 </div>
-                                <div className="md:w-3/5 p-8 md:p-12 overflow-y-auto no-scrollbar space-y-10 text-black text-left">
+                                <div className="md:w-3/5 p-8 md:p-12 overflow-y-auto no-scrollbar space-y-10 text-black">
                                     <div className="space-y-3">
                                         <div className="flex items-center gap-4">
-                                            <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter leading-none">{selectedGym.name}</h2>
+                                            <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter leading-none text-black">{selectedGym.name}</h2>
                                             <button onClick={() => handleLike(selectedGym.id, selectedGym.upvotes)} className="hover:scale-110 transition-transform active:scale-90 flex items-center gap-1.5"><Icon name="heart" size={18} className="text-red-500 fill-red-500" /><span className="text-[10px] font-black text-gray-400">{selectedGym.upvotes || 0}</span></button>
                                         </div>
-                                        <div className="flex items-center gap-2 text-gray-400 font-bold uppercase text-[11px] tracking-widest"><Icon name="map-pin" size={14} className="text-red-500"/> {selectedGym.location || selectedGym.city}</div>
+                                        <div className="flex items-center gap-2 text-gray-400 font-bold uppercase text-[11px] tracking-widest text-left"><Icon name="map-pin" size={14} className="text-red-500"/> {selectedGym.location || selectedGym.city}</div>
                                     </div>
-                                    <div className="bg-[#d7df22]/5 border-2 border-[#d7df22]/20 p-8 rounded-[2.5rem] space-y-8 shadow-inner">
+                                    <div className="bg-[#d7df22]/5 border-2 border-[#d7df22]/20 p-8 rounded-[2.5rem] space-y-8 shadow-inner text-black">
                                         <div className="flex items-center gap-3 text-black font-black text-[10px] uppercase tracking-widest"><Icon name="users" size={20} /> Athlete Directory</div>
                                         <div className="grid grid-cols-1 gap-10">
                                             <div className="space-y-4">
@@ -649,7 +672,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-6">
+                                    <div className="space-y-6 text-black">
                                         <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 pb-2 flex items-center gap-2 italic"><Icon name="trophy" size={14}/> Intelligence intelligence</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6 text-left">
                                             <MetricBar label="Hygiene Score" value={selectedGym.hygiene_score} icon="shield-check" />
