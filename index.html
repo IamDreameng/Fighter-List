@@ -34,7 +34,6 @@
 
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // --- Brand Specific Icons ---
         const InstagramIcon = ({ size = 16 }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
         );
@@ -47,6 +46,10 @@
             <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
         );
 
+        const FBIcon = ({ size = 16 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        );
+
         const Icon = ({ name, size = 16, className = "" }) => {
             useEffect(() => { 
                 if (window.lucide) window.lucide.createIcons(); 
@@ -54,7 +57,7 @@
             return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
         };
 
-        const CopyButton = ({ text }) => {
+        const CopyButton = ({ text, size = 10, showText = false, customStyle = "" }) => {
             const [copied, setCopied] = useState(false);
             const handleCopy = (e) => {
                 e.stopPropagation();
@@ -67,8 +70,9 @@
                 setTimeout(() => setCopied(false), 2000);
             };
             return (
-                <button onClick={handleCopy} className="p-1 hover:bg-gray-100 rounded transition-all active:scale-90">
-                    <Icon name={copied ? "check" : "copy"} size={10} className={copied ? "text-green-500" : "text-gray-400"} />
+                <button onClick={handleCopy} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all active:scale-95 ${customStyle || (copied ? 'bg-green-50' : 'hover:bg-gray-100')}`}>
+                    {showText && <span className={`text-[8px] font-black uppercase ${copied ? 'text-green-600' : 'text-gray-400'}`}>{copied ? 'Copied!' : 'Copy'}</span>}
+                    <Icon name={copied ? "check" : "copy"} size={size} className={copied ? "text-green-500" : "text-gray-400"} />
                 </button>
             );
         };
@@ -95,6 +99,8 @@
             const [selectedGym, setSelectedGym] = useState(null);
             const [showPassport, setShowPassport] = useState(false);
             const [revealedSponsors, setRevealedSponsors] = useState(new Set());
+            const [revealedFights, setRevealedFights] = useState(new Set());
+            const [shareMenuFightId, setShareMenuFightId] = useState(null);
 
             const [gyms, setGyms] = useState([]);
             const [fights, setFights] = useState([]);
@@ -102,24 +108,37 @@
             const [sponsors, setSponsors] = useState([]);
             const [profiles, setProfiles] = useState([]);
             
-            // Auth State
             const [email, setEmail] = useState("");
             const [password, setPassword] = useState("");
             const [fullName, setFullName] = useState("");
             const [authError, setAuthError] = useState("");
             const [isLogin, setIsLogin] = useState(true);
 
+            const sortGyms = (data) => {
+                return [...data].sort((a, b) => {
+                    const aName = a.name?.toLowerCase() || "";
+                    const bName = b.name?.toLowerCase() || "";
+                    const isABangtao = aName.includes("bangtao");
+                    const isBBangtao = bName.includes("bangtao");
+                    
+                    if (isABangtao && !isBBangtao) return -1;
+                    if (!isABangtao && isBBangtao) return 1;
+                    
+                    return (b.upvotes || 0) - (a.upvotes || 0) || aName.localeCompare(bName);
+                });
+            };
+
             useEffect(() => {
                 const loadData = async () => {
                     setLoading(true);
                     const [gymRes, fightRes, gearRes, sponsorRes, profileRes] = await Promise.all([
-                        supabase.from('gyms').select('*').order('upvotes', { ascending: false }),
-                        supabase.from('fights').select('*'),
+                        supabase.from('gyms').select('*'),
+                        supabase.from('fights').select('*').order('event_date', { ascending: true }),
                         supabase.from('gear_discounts').select('*'),
                         supabase.from('sponsors').select('*'),
                         supabase.from('profiles').select('*')
                     ]);
-                    if (gymRes.data) setGyms(gymRes.data);
+                    if (gymRes.data) setGyms(sortGyms(gymRes.data));
                     if (fightRes.data) setFights(fightRes.data);
                     if (gearRes.data) setGear(gearRes.data);
                     if (sponsorRes.data) setSponsors(sponsorRes.data);
@@ -162,7 +181,9 @@
 
             const handleLike = async (gymId, currentLikes) => {
                 const newCount = (currentLikes || 0) + 1;
-                setGyms(gyms.map(g => g.id === gymId ? { ...g, upvotes: newCount } : g));
+                const updatedGyms = gyms.map(g => g.id === gymId ? { ...g, upvotes: newCount } : g);
+                setGyms(sortGyms(updatedGyms));
+
                 if (selectedGym && selectedGym.id === gymId) setSelectedGym({...selectedGym, upvotes: newCount});
                 await supabase.from('gyms').update({ upvotes: newCount }).eq('id', gymId);
             };
@@ -172,6 +193,18 @@
                 if (newSet.has(id)) newSet.delete(id);
                 else newSet.add(id);
                 setRevealedSponsors(newSet);
+            };
+
+            const toggleFightReveal = (id) => {
+                const newSet = new Set(revealedFights);
+                if (newSet.has(id)) newSet.delete(id);
+                else newSet.add(id);
+                setRevealedFights(newSet);
+            };
+
+            const toggleShareMenu = (id) => {
+                if (shareMenuFightId === id) setShareMenuFightId(null);
+                else setShareMenuFightId(id);
             };
 
             const AvatarStack = ({ gymId }) => {
@@ -204,6 +237,44 @@
                 return matchesCity && matchesType && f.event_name.toLowerCase().includes(searchQuery.toLowerCase());
             });
 
+            const filteredGear = gear.filter(item => 
+                item.brand_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                item.product_name?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+
+            const filteredSponsors = sponsors.filter(s => 
+                s.brand_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                s.focus?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+
+            const isPublicView = ['gyms', 'fights', 'gear', 'sponsors'].includes(view);
+
+            const handleShare = (platform, fight) => {
+                const url = window.location.href;
+                const text = `Check out ${fight.event_name} in ${fight.city} on Fighter List!`;
+                
+                switch(platform) {
+                    case 'fb':
+                        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+                        break;
+                    case 'wa':
+                        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text + " " + url)}`, '_blank');
+                        break;
+                    case 'ig':
+                        window.open(`https://instagram.com`, '_blank'); 
+                        break;
+                }
+            };
+
+            const RegisterCTA = ({ title, text, fullWidth = false }) => (
+                <div onClick={() => setView('auth')} className={`${fullWidth ? 'col-span-full mt-4' : 'h-full'} bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-[2.5rem] flex flex-col items-center justify-center text-center cursor-pointer hover:border-black transition-all group animate-fade-in`}>
+                    <Icon name="lock" size={32} className="text-black mb-4 group-hover:scale-110 transition-transform"/>
+                    <h4 className="text-xl font-black italic uppercase text-black leading-none mb-2 tracking-tighter">{title}</h4>
+                    <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-6">{text}</p>
+                    <button className="bg-black text-[#d7df22] px-10 py-3 rounded-full text-[10px] font-black uppercase italic shadow-lg">Sign Up</button>
+                </div>
+            );
+
             return (
                 <div className="min-h-screen bg-white text-black selection-brand font-['Montserrat']">
                     {/* NAV */}
@@ -229,25 +300,34 @@
                     </nav>
 
                     {/* FILTER STRIP */}
-                    {(view === 'gyms' || view === 'fights') && !showPassport && (
+                    {isPublicView && !showPassport && (
                         <div className="bg-white border-b border-gray-100 py-4 sticky top-16 z-40 px-4 md:px-6 space-y-4 shadow-sm text-left">
                             <div className="max-w-7xl mx-auto space-y-4">
-                                <div className="flex items-center gap-3 overflow-x-auto no-scrollbar text-black">
-                                    <Icon name="globe" size={16} className="text-gray-300 shrink-0"/>
-                                    {["Where", "Phuket", "Patong", "Perth", "Bangkok", "Austin", "LA"].map(city => (
-                                        <button key={city} onClick={() => setActiveCity(city)} className={`whitespace-nowrap px-4 py-2 rounded-xl text-[9px] font-black uppercase border transition-all ${activeCity === city ? 'bg-black text-[#d7df22] border-black shadow-lg' : 'text-gray-400 border-gray-100 bg-white'}`}>{city}</button>
-                                    ))}
-                                </div>
-                                <div className="flex items-center gap-3 text-black">
-                                    <Icon name="layout-grid" size={16} className="text-gray-300 shrink-0"/>
-                                    <div className="flex gap-2 items-center overflow-x-auto no-scrollbar">
-                                        {["All", "MMA", "Muay Thai", "BJJ", "Flyweight", "Bantamweight", "Featherweight"].map(type => (
-                                            <button key={type} onClick={() => setActiveType(type)} className={`whitespace-nowrap px-4 py-2 rounded-xl text-[9px] font-black uppercase border transition-all ${activeType === type ? 'bg-[#d7df22] text-black border-black shadow-lg' : 'text-gray-400 border-gray-100 bg-white'}`}>{type}</button>
+                                {(view === 'gyms' || view === 'fights') && (
+                                    <div className="flex items-center gap-3 overflow-x-auto no-scrollbar text-black">
+                                        <Icon name="globe" size={16} className="text-[#d7df22] shrink-0"/>
+                                        {["Where", "Phuket", "Patong", "Perth", "Bangkok", "Austin", "LA"].map(city => (
+                                            <button key={city} onClick={() => setActiveCity(city)} className={`whitespace-nowrap px-4 py-2 rounded-xl text-[9px] font-black uppercase border transition-all ${activeCity === city ? 'bg-black text-[#d7df22] border-black shadow-lg' : 'text-gray-400 border-gray-100 bg-white'}`}>{city}</button>
                                         ))}
-                                        <div className="relative shrink-0 flex-1 min-w-[150px]">
-                                            <Icon name="search" size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
-                                            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Searching" className="bg-gray-50 border border-gray-100 py-2 pl-8 pr-4 rounded-xl text-[10px] font-bold outline-none focus:border-black w-full text-black" />
+                                    </div>
+                                )}
+                                <div className="flex flex-col md:flex-row md:items-center gap-3 text-black">
+                                    {(view === 'gyms' || view === 'fights') && (
+                                        <div className="flex gap-2 items-center overflow-x-auto no-scrollbar shrink-0">
+                                            <Icon name="layout-grid" size={16} className="text-gray-300 shrink-0"/>
+                                            {["All", "MMA", "Muay Thai", "BJJ", "Flyweight", "Bantamweight", "Featherweight"].map(type => (
+                                                <button key={type} onClick={() => setActiveType(type)} className={`whitespace-nowrap px-4 py-2 rounded-xl text-[9px] font-black uppercase border transition-all ${activeType === type ? 'bg-[#d7df22] text-black border-black shadow-lg' : 'text-gray-400 border-gray-100 bg-white'}`}>{type}</button>
+                                            ))}
                                         </div>
+                                    )}
+                                    <div className="relative flex-1 min-w-[200px]">
+                                        <Icon name="search" size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
+                                        <input 
+                                            value={searchQuery} 
+                                            onChange={(e) => setSearchQuery(e.target.value)} 
+                                            placeholder={`Search ${view}...`} 
+                                            className="bg-gray-50 border border-gray-100 py-2.5 pl-9 pr-4 rounded-xl text-[10px] font-bold outline-none focus:border-black w-full text-black shadow-sm" 
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -288,7 +368,7 @@
                                             {authError && <p className={`text-[10px] font-black uppercase tracking-tight ${authError.includes('Success') ? 'text-green-500' : 'text-red-500'}`}>{authError}</p>}
                                             
                                             <button type="submit" className="w-full bg-black text-[#d7df22] py-5 rounded-[1.5rem] font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all">
-                                                {isLogin ? "Enter Dashboard" : "Join the List"}
+                                                {isLogin ? "Enter Dashboard" : "Sign Up"}
                                             </button>
                                             
                                             <p className="text-center text-[9px] font-black uppercase text-gray-400 cursor-pointer pt-2" onClick={() => { setIsLogin(!isLogin); setAuthError(""); }}>
@@ -337,7 +417,10 @@
                                         <div key={gym.id} className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-xl cursor-pointer hover:shadow-2xl transition-all group flex flex-col h-full text-left" onClick={() => setSelectedGym(gym)}>
                                             <div className="relative h-52 overflow-hidden bg-gray-50 shrink-0">
                                                 <img src={gym.image_url || "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=800"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="gym" />
-                                                <div className="absolute top-4 left-4 flex gap-1">{gym.disciplines?.slice(0,3).map(d => <span key={d} className="bg-black/80 text-[#d7df22] text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest">{d}</span>)}</div>
+                                                <div className="absolute top-4 left-4 flex gap-1">
+                                                    {gym.name?.toLowerCase().includes("bangtao") && <span className="bg-[#d7df22] text-black text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Featured</span>}
+                                                    {gym.disciplines?.slice(0,2).map(d => <span key={d} className="bg-black/80 text-[#d7df22] text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest">{d}</span>)}
+                                                </div>
                                             </div>
                                             <div className="p-8 flex flex-col flex-1 text-black">
                                                 <div className="flex items-center gap-1.5 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-1"><Icon name="map-pin" size={12} className="text-red-500" /> {gym.location || gym.city}</div>
@@ -348,13 +431,11 @@
                                                         <span className="text-[10px] font-black text-gray-400">{gym.upvotes || 0}</span>
                                                     </div>
                                                 </div>
-                                                
                                                 <div className="grid grid-cols-3 gap-1 py-4 border-y border-gray-50 mb-6 mt-auto text-center">
                                                     <div className="border-r border-gray-50"><p className="text-[7px] font-black text-gray-300 uppercase leading-none mb-2 tracking-tighter">Here Now</p><AvatarStack gymId={gym.id} /></div>
                                                     <div className="border-r border-gray-50"><p className="text-[7px] font-black text-gray-400 uppercase leading-none mb-2 tracking-tighter">Was Here</p><span className="text-[10px] text-gray-200 font-black">-</span></div>
                                                     <div><p className="text-[7px] font-black text-gray-300 uppercase leading-none mb-2 tracking-tighter">Visit Soon</p><span className="text-[10px] text-gray-200 font-black">-</span></div>
                                                 </div>
-
                                                 <button className="w-full bg-black text-[#d7df22] py-2.5 rounded-xl font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all shadow-md">Details</button>
                                             </div>
                                         </div>
@@ -362,12 +443,12 @@
                                 </div>
                             )}
 
-                            {/* GEAR VIEW (Conditional Box Display) */}
+                            {/* GEAR VIEW */}
                             {view === 'gear' && (
                                 <div className="space-y-10 text-left text-black">
                                     <h2 className="text-4xl font-black italic uppercase tracking-tighter text-black leading-none">GEAR DISCOUNTS</h2>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                        {(user ? gear : gear.slice(0, 5)).map((item, i) => (
+                                        {(user ? filteredGear : filteredGear.slice(0, 5)).map((item, i) => (
                                             <div key={i} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between group hover:border-black transition-all text-black h-full">
                                                 <div>
                                                     <span className="bg-[#d7df22] text-black px-4 py-1 rounded-full text-[10px] font-black uppercase mb-6 inline-block border border-black/5 shadow-sm">{item.discount_amount}</span>
@@ -375,25 +456,20 @@
                                                     <h4 className="text-lg font-black italic uppercase mb-6 leading-tight">{item.product_name}</h4>
                                                     <div className="bg-gray-50 p-4 rounded-2xl border-2 border-dashed border-gray-100 flex justify-between items-center mb-6 font-mono font-black text-lg text-black">
                                                         <span>{item.discount_code}</span>
-                                                        <CopyButton text={item.discount_code} />
+                                                        <CopyButton text={item.discount_code} showText={true} />
                                                     </div>
                                                 </div>
                                                 <button onClick={() => window.open(item.affiliate_url)} className="w-full bg-black text-[#d7df22] py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest mt-auto shadow-lg active:scale-95 transition-all">Get Deal</button>
                                             </div>
                                         ))}
-                                        {!user && gear.length > 5 && (
-                                            <div onClick={() => setView('auth')} className="bg-white border-2 border-dashed border-gray-200 p-8 rounded-[2.5rem] flex flex-col items-center justify-center text-center cursor-pointer hover:border-black transition-all shadow-xl active:scale-95">
-                                                <Icon name="lock" size={40} className="text-black mb-4"/>
-                                                <h4 className="text-xl font-black italic uppercase text-black leading-none mb-2">Register to Unlock</h4>
-                                                <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-6">See 20+ hidden combat gear discounts</p>
-                                                <button className="bg-black text-[#d7df22] px-8 py-3 rounded-full text-[10px] font-black uppercase italic shadow-lg">Join the List</button>
-                                            </div>
+                                        {!user && filteredGear.length >= 5 && (
+                                            <div className="h-full"><RegisterCTA title="Unlock More Gear" text="See 20+ hidden combat gear discounts" /></div>
                                         )}
                                     </div>
                                 </div>
                             )}
 
-                            {/* SPONSORS VIEW (Conditional Box Display) */}
+                            {/* SPONSORS VIEW */}
                             {view === 'sponsors' && (
                                 <div className="space-y-10 text-left text-black">
                                     <div className="bg-[#d7df22] p-12 rounded-[3rem] text-black shadow-2xl relative overflow-hidden">
@@ -402,8 +478,8 @@
                                         <p className="max-w-xl font-bold text-sm leading-loose opacity-80 uppercase tracking-widest text-black">Sponsorship is a partnership. Here are the elite brands looking to sponsor active combat athletes.</p>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
-                                        {(user ? sponsors : sponsors.slice(0, 5)).map(s => (
-                                            <div key={s.id} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all text-black">
+                                        {(user ? filteredSponsors : filteredSponsors.slice(0, 5)).map(s => (
+                                            <div key={s.id} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all text-black h-full">
                                                 <div>
                                                     <h3 className="text-xl font-black italic uppercase mb-1 leading-none">{s.brand_name}</h3>
                                                     <p className="text-[#d7df22] font-black uppercase text-[8px] tracking-[0.2em] bg-black inline-block px-2 py-0.5 rounded mb-8">{s.focus}</p>
@@ -412,22 +488,34 @@
                                                         <div className="bg-gray-50 p-4 rounded-2xl"><p className="text-[8px] font-black text-gray-400 uppercase mb-1 tracking-widest italic">Offer</p><p className="text-[10px] font-bold leading-tight">{s.offer}</p></div>
                                                     </div>
                                                 </div>
-                                                <button onClick={() => { if(!user) setView('auth'); else toggleSponsorReveal(s.id); }} className="w-full py-4 rounded-2xl font-black uppercase italic tracking-widest text-[10px] bg-black text-white hover:bg-[#d7df22] hover:text-black transition-all mt-auto flex items-center justify-center gap-2 shadow-xl">
-                                                    {revealedSponsors.has(s.id) ? (
-                                                        <span className="flex items-center gap-2 uppercase font-bold">{s.email || 'team.restround@gmail.com'} <CopyButton text={s.email || 'team.restround@gmail.com'}/></span>
+                                                
+                                                <div className="mt-auto">
+                                                    {!revealedSponsors.has(s.id) ? (
+                                                        <button 
+                                                            onClick={() => toggleSponsorReveal(s.id)} 
+                                                            className="w-full py-4 rounded-2xl font-black uppercase italic tracking-widest text-[10px] bg-black text-white hover:bg-[#d7df22] hover:text-black transition-all flex items-center justify-center gap-2 shadow-xl"
+                                                        >
+                                                            Contact
+                                                        </button>
                                                     ) : (
-                                                        <><Icon name="lock" size={14}/> {user ? 'Reveal Email' : 'Register to Reveal'}</>
+                                                        <div className="flex items-center gap-2 bg-black text-white p-2 rounded-2xl animate-fade-in">
+                                                            <span className="text-[10px] font-black italic px-2 flex-1 truncate">{s.email || 'team.restround@gmail.com'}</span>
+                                                            <CopyButton 
+                                                                text={s.email || 'team.restround@gmail.com'} 
+                                                                size={11} 
+                                                                showText={true} 
+                                                                customStyle="bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg" 
+                                                            />
+                                                            <button onClick={() => toggleSponsorReveal(s.id)} className="text-white/40 hover:text-red-500 px-1">
+                                                                <Icon name="x" size={12} />
+                                                            </button>
+                                                        </div>
                                                     )}
-                                                </button>
+                                                </div>
                                             </div>
                                         ))}
-                                        {!user && sponsors.length > 5 && (
-                                            <div onClick={() => setView('auth')} className="bg-white border-2 border-dashed border-gray-200 p-8 rounded-[2.5rem] flex flex-col items-center justify-center text-center cursor-pointer hover:border-black transition-all shadow-xl active:scale-95">
-                                                <Icon name="target" size={40} className="text-black mb-4"/>
-                                                <h4 className="text-xl font-black italic uppercase text-black leading-none mb-2">Unlock More</h4>
-                                                <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-6">Connect with brands looking to sponsor fighters</p>
-                                                <button className="bg-black text-[#d7df22] px-8 py-3 rounded-full text-[10px] font-black uppercase italic shadow-lg">Join the List</button>
-                                            </div>
+                                        {!user && filteredSponsors.length >= 5 && (
+                                            <div className="h-full"><RegisterCTA title="Unlock More Sponsors" text="Connect with brands looking for talent" /></div>
                                         )}
                                     </div>
                                 </div>
@@ -437,35 +525,79 @@
                             {view === 'fights' && (
                                 <div className="max-w-4xl mx-auto space-y-4 text-left text-black">
                                     <h2 className="text-4xl font-black italic uppercase tracking-tighter mb-10 text-black leading-none">Community Updates</h2>
-                                    {filteredFights.map(f => (
-                                        <div key={f.id} className="bg-white border-2 border-black p-6 rounded-[2rem] flex items-center justify-between shadow-xl text-black">
-                                            <div className="flex items-center gap-8 text-left">
-                                                <div className="bg-gray-50 p-4 rounded-2xl text-center min-w-[90px] border border-gray-100 shadow-inner">
-                                                    <p className="text-[10px] font-black text-gray-400 uppercase leading-none mb-1">{f.event_date?.split(' ')[0]}</p>
-                                                    <p className="text-2xl font-black italic tracking-tighter">{f.event_date?.split(' ')[1] || ""}</p>
-                                                </div>
-                                                <div className="text-left space-y-1">
-                                                    <span className="bg-[#d7df22] text-black px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest">{f.fight_type}</span>
-                                                    <h3 className="text-2xl font-black italic uppercase mt-1 leading-tight">{f.event_name}</h3>
-                                                    <div className="flex items-center gap-4">
-                                                        <p className="text-gray-400 font-bold uppercase text-[10px] flex items-center gap-1.5 tracking-widest"><Icon name="map-pin" size={12} className="text-red-500" /> {f.city}</p>
-                                                        <div className="flex items-center gap-1 bg-gray-50 px-2 py-0.5 rounded border border-gray-100">
-                                                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{f.contact_info}</p>
-                                                            <CopyButton text={f.contact_info} />
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {(user ? filteredFights : filteredFights.slice(0, 5)).map(f => (
+                                            <div key={f.id} className="bg-white border-2 border-black p-4 rounded-2xl flex flex-col shadow-md text-black relative group overflow-hidden animate-fade-in">
+                                                
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-4 flex-1">
+                                                        <div className="bg-gray-50 p-2 rounded-xl text-center min-w-[65px] border border-gray-100 shadow-inner shrink-0">
+                                                            <p className="text-[7px] font-black text-gray-400 uppercase leading-none mb-1">{f.event_date?.split(' ')[0]}</p>
+                                                            <p className="text-lg font-black italic tracking-tighter">{f.event_date?.split(' ')[1] || "TBD"}</p>
+                                                        </div>
+                                                        <div className="text-left space-y-0.5 overflow-hidden pr-2">
+                                                            <span className="bg-[#d7df22] text-black px-2 py-0.2 rounded-full text-[7px] font-black uppercase tracking-widest">{f.fight_type}</span>
+                                                            <h3 className="text-sm md:text-base font-black italic uppercase leading-tight tracking-tighter truncate">{f.event_name}</h3>
+                                                            <p className="text-gray-400 font-bold uppercase text-[8px] flex items-center gap-1 tracking-widest italic leading-none"><Icon name="map-pin" size={10} className="text-red-500" /> {f.city}</p>
                                                         </div>
                                                     </div>
+
+                                                    <div className="flex items-center gap-3 shrink-0 relative">
+                                                        {!revealedFights.has(f.id) ? (
+                                                            <button 
+                                                                onClick={() => toggleFightReveal(f.id)} 
+                                                                className="px-6 py-2 bg-black text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-[#d7df22] hover:text-black transition-all shadow-sm"
+                                                            >
+                                                                Contact
+                                                            </button>
+                                                        ) : (
+                                                            <div className="flex items-center gap-2 bg-black text-white p-1 rounded-xl animate-fade-in">
+                                                                <span className="text-[9px] font-black italic px-2 max-w-[140px] truncate">{f.contact_info}</span>
+                                                                <CopyButton text={f.contact_info} size={11} showText={true} customStyle="bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg" />
+                                                                <button 
+                                                                    onClick={() => toggleFightReveal(f.id)} 
+                                                                    className="text-white/40 hover:text-red-500 transition-colors px-1"
+                                                                >
+                                                                    <Icon name="x" size={12} />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        <button 
+                                                            onClick={() => toggleShareMenu(f.id)}
+                                                            className={`p-2 rounded-full transition-all border border-gray-100 shadow-sm ${shareMenuFightId === f.id ? 'bg-[#d7df22] text-black' : 'bg-gray-50 text-gray-400 hover:text-black'}`}
+                                                        >
+                                                            <Icon name="share-2" size={12} />
+                                                        </button>
+                                                    </div>
                                                 </div>
+
+                                                {shareMenuFightId === f.id && (
+                                                    <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between bg-gray-50 p-2 rounded-xl animate-fade-in">
+                                                        <div className="flex items-center gap-4">
+                                                            <CopyButton text={window.location.href} size={12} showText={true} customStyle="bg-white hover:bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm" />
+                                                            <div className="h-6 w-px bg-gray-200" />
+                                                            <div className="flex items-center gap-4 px-2">
+                                                                <button onClick={() => handleShare('ig', f)} className="hover:text-[#d7df22] transition-colors"><InstagramIcon size={16} /></button>
+                                                                <button onClick={() => handleShare('fb', f)} className="hover:text-blue-600 transition-colors"><FBIcon size={16} /></button>
+                                                                <button onClick={() => handleShare('wa', f)} className="hover:text-green-500 transition-colors"><WhatsAppIcon size={16} /></button>
+                                                            </div>
+                                                        </div>
+                                                        <button onClick={() => setShareMenuFightId(null)} className="text-gray-300 hover:text-red-500"><Icon name="x" size={14}/></button>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <button onClick={() => window.location.href=`mailto:${f.contact_info}`} className="bg-black text-white px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest active:scale-95 shadow-lg hover:bg-[#d7df22] hover:text-black transition-all">Contact</button>
-                                        </div>
-                                    ))}
+                                        ))}
+                                        {!user && filteredFights.length >= 5 && <RegisterCTA fullWidth title="Unlock More Fights" text="Gain access to the full matchmaking intelligence feed" />}
+                                    </div>
+                                    {filteredFights.length === 0 && <div className="py-20 text-center text-gray-400 font-black uppercase tracking-widest italic">No fights match your search</div>}
                                 </div>
                             )}
                           </div>
                         )}
                     </main>
 
-                    {/* COMPACT UNIFIED FOOTER */}
+                    {/* FOOTER */}
                     <footer className="bg-white py-12 border-t border-gray-100 text-black">
                         <div className="max-w-7xl mx-auto px-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-[10px] font-black uppercase tracking-[0.2em] italic whitespace-nowrap">
                             <div className="flex items-center gap-4 text-black">
@@ -503,7 +635,7 @@
                                         <div className="flex items-center gap-4">
                                             <h2 className="text-xl md:text-2xl font-black italic uppercase leading-none text-black tracking-tighter">{selectedGym.name}</h2>
                                             <button onClick={() => handleLike(selectedGym.id, selectedGym.upvotes)} className="hover:scale-110 transition-transform active:scale-90 flex items-center gap-1.5">
-                                                <Icon name="heart" size={20} className="text-red-500 fill-red-500" />
+                                                <Icon name="heart" size={18} className="text-red-500 fill-red-500" />
                                                 <span className="text-[10px] font-black text-gray-400">{selectedGym.upvotes || 0}</span>
                                             </button>
                                         </div>
