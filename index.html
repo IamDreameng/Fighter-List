@@ -146,6 +146,19 @@
                 });
             };
 
+            // PRIORITIZE REST ROUND™ IN GEAR LIST
+            const sortGear = (data) => {
+                return [...data].sort((a, b) => {
+                    const aBrand = a.brand_name?.toLowerCase() || "";
+                    const bBrand = b.brand_name?.toLowerCase() || "";
+                    const isARestRound = aBrand.includes("rest round");
+                    const isBRestRound = bBrand.includes("rest round");
+                    if (isARestRound && !isBRestRound) return -1;
+                    if (!isARestRound && isBRestRound) return 1;
+                    return 0;
+                });
+            };
+
             const loadData = async () => {
                 setLoading(true);
                 const [gymRes, fightRes, gearRes, sponsorRes, profileRes] = await Promise.all([
@@ -157,7 +170,7 @@
                 ]);
                 if (gymRes.data) setGyms(sortGyms(gymRes.data));
                 if (fightRes.data) setFights(fightRes.data);
-                if (gearRes.data) setGear(gearRes.data);
+                if (gearRes.data) setGear(sortGear(gearRes.data));
                 if (sponsorRes.data) setSponsors(sponsorRes.data);
                 if (profileRes.data) setProfiles(profileRes.data);
                 setLoading(false);
@@ -256,6 +269,30 @@
                         <p className="text-gray-400 text-[11px] leading-relaxed">Stop staph and ringworm before they stop your camp. Our HOCL Skin & Gear spray is the elite standard for recovery hygiene.</p>
                     </div>
                     <a href="https://restround.co" target="_blank" className="w-full bg-[#d7df22] text-black py-3 rounded-xl font-black uppercase text-[9px] tracking-[0.2em] text-center shadow-lg transition-all active:scale-95 mt-6 group-hover:bg-white">Shop Rest Round™</a>
+                </div>
+            );
+
+            const GlobalAdBanner = () => (
+                <div className="w-full px-4 md:px-12 py-10">
+                    <a 
+                        href="https://restround.co" 
+                        target="_blank"
+                        className="block bg-black rounded-[3rem] p-10 md:p-16 relative overflow-hidden group shadow-2xl border-4 border-[#d7df22]/20 hover:border-[#d7df22] transition-all"
+                    >
+                        <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-[#d7df22]/10 to-transparent"></div>
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
+                            <div className="text-left space-y-4">
+                                <h2 className="text-4xl md:text-6xl font-black italic uppercase text-white tracking-tighter leading-none">PROTECT YOUR CAMP</h2>
+                                <p className="text-[#d7df22] text-sm md:text-lg font-black uppercase tracking-[0.3em] italic">HOCL Combat Skin & Gear Hygiene</p>
+                            </div>
+                            <div className="flex flex-col items-center gap-4">
+                                <div className="bg-[#d7df22] text-black px-12 py-5 rounded-2xl font-black uppercase italic tracking-widest text-sm group-hover:scale-110 transition-transform">
+                                    Shop REST ROUND™
+                                </div>
+                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Engineered for the Elite</p>
+                            </div>
+                        </div>
+                    </a>
                 </div>
             );
 
@@ -468,11 +505,8 @@
                                                         <div className="flex justify-between items-start mb-6">
                                                             <span className="bg-[#d7df22] text-black px-4 py-1 rounded-full text-[10px] font-black uppercase inline-block">-{item.discount_amount}</span>
                                                         </div>
-                                                        {/* BRAND NAME - NOW BIGGER AND BOLD */}
                                                         <h3 className="text-2xl font-black italic uppercase leading-none mb-1">{item.brand_name || "Official Partner"}</h3>
-                                                        {/* PRODUCT NAME - NOW SMALLER SUB-LABEL */}
                                                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest italic mb-8">{item.product_name}</p>
-                                                        
                                                         <div className="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-100 flex justify-between items-center mb-8 font-mono font-black text-xl shadow-inner text-black text-center">
                                                             <span>{item.discount_code}</span>
                                                             <CopyButton text={item.discount_code} showText={true} />
@@ -563,6 +597,9 @@
                           </div>
                         )}
                     </main>
+
+                    {/* REST ROUND™ GLOBAL AD BANNER */}
+                    <GlobalAdBanner />
 
                     {/* GYM DETAIL MODAL */}
                     {selectedGym && (
