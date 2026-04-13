@@ -107,6 +107,7 @@
             const [shareMenuFightId, setShareMenuFightId] = useState(null);
             const [socialExpand, setSocialExpand] = useState(null); 
             const [viewedAthlete, setViewedAthlete] = useState(null); 
+            const [copiedShareId, setCopiedShareId] = useState(null);
 
             const [gyms, setGyms] = useState([]);
             const [fights, setFights] = useState([]);
@@ -221,6 +222,17 @@
                 const newSet = new Set(revealedFights);
                 newSet.has(id) ? newSet.delete(id) : newSet.add(id);
                 setRevealedFights(newSet);
+            };
+
+            const handleShareFight = (fight) => {
+                const url = `${window.location.origin}${window.location.pathname}?view=fights&id=${fight.id}`;
+                const textArea = document.body.appendChild(document.createElement("textarea"));
+                textArea.value = url;
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                setCopiedShareId(fight.id);
+                setTimeout(() => setCopiedShareId(null), 2000);
             };
 
             const myProfile = profiles.find(p => p.id === user?.id) || { full_name: "Athlete", username: "HOLDER", avatar_url: "https://dmxg5wxfqgb4u.cloudfront.net/styles/athlete_bio_full_body/s3/2023-02/VOLKANOVSKI_ALEXANDER_L_02-11.png" };
@@ -512,7 +524,7 @@
                                                             <CopyButton text={item.discount_code} showText={true} />
                                                         </div>
                                                     </div>
-                                                    <button onClick={() => window.open(item.affiliate_url)} className="w-full bg-black text-[#d7df22] py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-lg">Get Deal</button>
+                                                    <button onClick={() => window.open(item.affiliate_url)} className="w-full bg-black text-[#d7df22] py-4 rounded-2xl font-black uppercase italic tracking-widest shadow-lg">Get Deal</button>
                                                 </div>
                                             );
                                             return elements;
@@ -575,11 +587,22 @@
                                                 <div className="flex-1 pl-4 md:pl-6 text-left">
                                                     <span className="bg-[#d7df22] text-black px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest italic inline-block mb-1">CALL OUT</span>
                                                     <h3 className="text-sm md:text-xl font-black italic uppercase leading-tight tracking-tighter truncate max-w-[150px] md:max-w-md">{f.event_name}</h3>
-                                                    <p className="text-gray-400 font-bold uppercase text-[9px] flex items-center gap-1 tracking-widest italic"><Icon name="map-pin" size={10} className="text-red-500" /> {f.city}</p>
+                                                    <p className="text-[9px] md:text-[10px] font-black uppercase text-gray-400 mt-1 italic tracking-widest">{f.fight_type || "Amateur Flyweight"}</p>
+                                                    <p className="text-gray-400 font-bold uppercase text-[9px] flex items-center gap-1 tracking-widest italic mt-1"><Icon name="map-pin" size={10} className="text-red-500" /> {f.city}</p>
                                                 </div>
-                                                <div className="flex items-center">
+                                                <div className="flex items-center gap-2">
                                                     {!revealedFights.has(f.id) ? (
-                                                        <button onClick={() => toggleFightReveal(f.id)} className="bg-black text-white px-6 md:px-10 py-3 md:py-4 rounded-[1.5rem] font-black uppercase text-[10px] tracking-widest hover:bg-[#d7df22] hover:text-black transition-all shadow-xl active:scale-95">CONTACT</button>
+                                                        <div className="flex items-center gap-2">
+                                                            {/* CONTACT BUTTON */}
+                                                            <button onClick={() => toggleFightReveal(f.id)} className="bg-black text-white px-6 md:px-10 py-3 md:py-4 rounded-[1.5rem] font-black uppercase text-[10px] tracking-widest hover:bg-[#d7df22] hover:text-black transition-all shadow-xl active:scale-95">CONTACT</button>
+                                                            {/* SHARE ICON BUTTON (PLACED BEHIND CONTACT) */}
+                                                            <button 
+                                                                onClick={() => handleShareFight(f)} 
+                                                                className={`p-3 md:p-4 rounded-[1.2rem] transition-all active:scale-95 shadow-lg border border-gray-100 flex items-center justify-center ${copiedShareId === f.id ? 'bg-green-500 text-white' : 'bg-gray-50 text-black hover:bg-black hover:text-[#d7df22]'}`}
+                                                            >
+                                                                <Icon name={copiedShareId === f.id ? "check" : "share-2"} size={16} />
+                                                            </button>
+                                                        </div>
                                                     ) : (
                                                         <div className="flex items-center gap-2 bg-black text-white p-2 rounded-2xl animate-fade-in shadow-xl mr-2">
                                                             <span className="text-[10px] font-black italic px-2 truncate max-w-[100px]">{f.contact_info}</span>
