@@ -4,10 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fighter List | Powered by REST ROUND™</title>
-    
-    <!-- WEBSITE ICON (FAVICON) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22black%22/><text x=%2250%%22 y=%2245%%22 text-anchor=%22middle%22 fill=%22%23d7df22%22 font-family=%22Arial Black, sans-serif%22 font-size=%2218%22 font-weight=%22900%22 style=%22letter-spacing:-1px%22>FIGHTER</text><text x=%2250%%22 y=%2282%%22 text-anchor=%22middle%22 fill=%22%23d7df22%22 font-family=%22Arial Black, sans-serif%22 font-size=%2236%22 font-weight=%22900%22 style=%22letter-spacing:-1px%22>LIST</text></svg>">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -20,11 +17,16 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .selection-brand::selection { background: #d7df22; color: black; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes slideIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .animate-slide-up { animation: slideIn 0.3s ease-out; }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-slide-up { animation: slideUp 0.35s ease-out; }
+        .animate-modal { animation: slideIn 0.3s ease-out; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
         select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+        .tab-active { background: black; color: #d7df22; }
+        .tab-inactive { color: #9ca3af; }
+        .tab-inactive:hover { color: black; }
     </style>
 </head>
 <body class="bg-white text-black selection-brand overflow-x-hidden">
@@ -34,88 +36,128 @@
         const { useState, useEffect, useMemo } = React;
 
         // --- SUPABASE CONFIG ---
-        const SUPABASE_URL = "https://eahymntxxgflqkogdfxs.supabase.co"; 
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhaHltbnR4eGdmbHFrb2dkZnhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NTYzODEsImV4cCI6MjA5MTEzMjM4MX0.Tg4VEgCcWHtcZYyrXcMILd3jsf8jFDM9twPL-yX8R_s"; 
+        const SUPABASE_URL = "https://eahymntxxgflqkogdfxs.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhaHltbnR4eGdmbHFrb2dkZnhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NTYzODEsImV4cCI6MjA5MTEzMjM4MX0.Tg4VEgCcWHtcZYyrXcMILd3jsf8jFDM9twPL-yX8R_s";
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // --- ICONS ---
         const InstagramIcon = ({ size = 16 }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
         );
-
         const WhatsAppIcon = ({ size = 16 }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
         );
-
         const XIcon = ({ size = 14 }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
         );
 
-        const FBIcon = ({ size = 16 }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-        );
-
         const Icon = ({ name, size = 16, className = "" }) => {
-            useEffect(() => { 
-                if (window.lucide) window.lucide.createIcons(); 
-            }, [name]);
-            return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [name]);
+            return <i data-lucide={name} style={{ width: size, height: size, display: 'inline-block' }} className={className}></i>;
         };
 
-        const CopyButton = ({ text, size = 10, showText = false, customStyle = "" }) => {
+        const CopyButton = ({ text, size = 12, showText = false }) => {
             const [copied, setCopied] = useState(false);
             const handleCopy = (e) => {
                 e.stopPropagation();
-                const textArea = document.body.appendChild(document.createElement("textarea"));
-                textArea.value = text;
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
+                navigator.clipboard?.writeText(text).catch(() => {
+                    const ta = document.createElement("textarea");
+                    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+                });
+                setCopied(true); setTimeout(() => setCopied(false), 2000);
             };
             return (
-                <button onClick={handleCopy} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all active:scale-95 ${customStyle || (copied ? 'bg-green-50' : 'hover:bg-gray-100')}`}>
+                <button onClick={handleCopy} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all active:scale-95 ${copied ? 'bg-green-50' : 'hover:bg-gray-100'}`}>
                     {showText && <span className={`text-[8px] font-black uppercase ${copied ? 'text-green-600' : 'text-gray-400'}`}>{copied ? 'Copied!' : 'Copy'}</span>}
                     <Icon name={copied ? "check" : "copy"} size={size} className={copied ? "text-green-500" : "text-gray-400"} />
                 </button>
             );
         };
 
-        const MetricBar = ({ label, value, icon, color = "bg-black" }) => (
-            <div className="space-y-1.5 text-left">
-                <div className="flex justify-between items-center font-black uppercase tracking-widest text-gray-500 text-[10px]">
-                    <div className="flex items-center gap-1.5"><Icon name={icon} size={12} className={icon === 'heart' ? 'text-red-500 fill-red-500' : ''}/>{label}</div>
+        const MetricBar = ({ label, value, icon }) => (
+            <div className="space-y-1.5">
+                <div className="flex justify-between items-center font-black uppercase tracking-widest text-gray-500 text-[9px]">
+                    <div className="flex items-center gap-1.5"><Icon name={icon} size={11} />{label}</div>
                     <span className="text-black font-black">{value || 0}%</span>
                 </div>
                 <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full ${color} transition-all duration-1000`} style={{ width: `${value || 0}%` }} />
+                    <div className="h-full bg-black transition-all duration-700" style={{ width: `${value || 0}%` }} />
                 </div>
             </div>
         );
 
+        // Discipline pill
+        const Pill = ({ label, accent = false }) => (
+            <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${accent ? 'bg-[#d7df22] text-black' : 'bg-gray-100 text-gray-500'}`}>{label}</span>
+        );
+
+        // Inline RestRound ad card — shown once per grid at position 4
+        const AdCard = () => (
+            <a href="https://restround.co" target="_blank" className="bg-black rounded-[2.5rem] p-8 flex flex-col justify-between text-left border border-[#d7df22]/20 shadow-2xl relative overflow-hidden group h-full">
+                <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-[#d7df22] opacity-10 rounded-full blur-3xl group-hover:opacity-20 transition-opacity pointer-events-none"></div>
+                <div>
+                    <span className="bg-[#d7df22] text-black text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest mb-4 inline-block italic">Partner</span>
+                    <h4 className="text-2xl font-black italic uppercase text-white leading-none mb-2 tracking-tighter">REST ROUND™</h4>
+                    <p className="text-[#d7df22] text-[9px] font-black uppercase tracking-[0.2em] mb-4 italic">HOCL Combat Hygiene</p>
+                    <p className="text-gray-400 text-[11px] leading-relaxed">Stop staph and ringworm before they stop your camp. Engineered for combat athletes.</p>
+                </div>
+                <div className="w-full bg-[#d7df22] text-black py-3 rounded-xl font-black uppercase text-[9px] tracking-[0.2em] text-center mt-6 group-hover:bg-white transition-colors">Shop Rest Round™</div>
+            </a>
+        );
+
+        // Lock gate for non-users
+        const RegisterCTA = ({ title, text, onSignUp }) => (
+            <div onClick={onSignUp} className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-[2.5rem] flex flex-col items-center justify-center text-center cursor-pointer hover:border-black transition-all group">
+                <Icon name="lock" size={28} className="text-black mb-4 group-hover:scale-110 transition-transform"/>
+                <h4 className="text-lg font-black italic uppercase text-black leading-none mb-2 tracking-tighter">{title}</h4>
+                <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-6">{text}</p>
+                <button className="bg-black text-[#d7df22] px-8 py-3 rounded-full text-[9px] font-black uppercase italic">Sign Up Free</button>
+            </div>
+        );
+
+        // Avatar stack for gym cards
+        const AvatarStack = ({ gymId, profiles }) => {
+            const attendees = profiles.filter(p => p.current_gym_id == gymId).slice(0, 3);
+            if (attendees.length === 0) return <span className="text-xs text-gray-300 font-black">—</span>;
+            return (
+                <div className="flex -space-x-2">
+                    {attendees.map((p, i) => (
+                        <img key={i} src={p.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.full_name)} className="inline-block h-7 w-7 rounded-full ring-2 ring-white object-cover" alt={p.full_name} />
+                    ))}
+                </div>
+            );
+        };
+
+        // ============================================================
+        // MAIN APP
+        // ============================================================
         const App = () => {
-            const [view, setView] = useState("gyms"); 
+            const [view, setView] = useState("gyms");
             const [user, setUser] = useState(null);
             const [loading, setLoading] = useState(true);
-            const [searchQuery, setSearchQuery] = useState("");
-            const [activeCity, setActiveCity] = useState("Where");
-            const [activeType, setActiveType] = useState("All");
-            const [selectedGym, setSelectedGym] = useState(null);
-            const [showPassport, setShowPassport] = useState(false);
-            const [revealedSponsors, setRevealedSponsors] = useState(new Set());
-            const [revealedFights, setRevealedFights] = useState(new Set());
-            const [shareMenuFightId, setShareMenuFightId] = useState(null);
-            const [socialExpand, setSocialExpand] = useState(null); 
-            const [viewedAthlete, setViewedAthlete] = useState(null); 
-            const [copiedShareId, setCopiedShareId] = useState(null);
 
+            // Data
             const [gyms, setGyms] = useState([]);
             const [fights, setFights] = useState([]);
             const [gear, setGear] = useState([]);
             const [sponsors, setSponsors] = useState([]);
             const [profiles, setProfiles] = useState([]);
-            
-            // Auth States
+
+            // UI state
+            const [searchQuery, setSearchQuery] = useState("");
+            const [activeCity, setActiveCity] = useState("All");
+            const [activeType, setActiveType] = useState("All");
+            const [selectedGym, setSelectedGym] = useState(null);
+            const [selectedFighter, setSelectedFighter] = useState(null);
+            const [showAuthModal, setShowAuthModal] = useState(false);
+            const [showProfilePanel, setShowProfilePanel] = useState(false);
+            const [revealedSponsors, setRevealedSponsors] = useState(new Set());
+            const [revealedFights, setRevealedFights] = useState(new Set());
+            const [copiedShareId, setCopiedShareId] = useState(null);
+            const [dealsTab, setDealsTab] = useState("gear"); // "gear" | "sponsors"
+            const [fightsTab, setFightsTab] = useState("matchmaking"); // "matchmaking" | "events"
+
+            // Auth form
             const [email, setEmail] = useState("");
             const [password, setPassword] = useState("");
             const [confirmPassword, setConfirmPassword] = useState("");
@@ -123,42 +165,25 @@
             const [authError, setAuthError] = useState("");
             const [isLogin, setIsLogin] = useState(true);
 
-            // Profile Edit States
+            // Profile editing
             const [isEditingProfile, setIsEditingProfile] = useState(false);
-            const [editHomeGym, setEditHomeGym] = useState("");
-            const [editCurrentGym, setEditCurrentGym] = useState("");
-            const [editPlannedGyms, setEditPlannedGyms] = useState("");
-            const [editVisitedGyms, setEditVisitedGyms] = useState("");
+            const [editFields, setEditFields] = useState({});
 
-            // Dynamic unique cities for the "Where" filter
-            const dynamicCities = useMemo(() => {
-                const gymLocs = gyms.map(g => g.city_country || g.city || g.location).filter(Boolean);
-                const fightLocs = fights.map(f => f.city || f.location).filter(Boolean);
-                return [...new Set([...gymLocs, ...fightLocs])].sort();
-            }, [gyms, fights]);
+            const sortGyms = (data) => [...data].sort((a, b) => {
+                const aFeat = a.name?.toLowerCase().includes("bangtao");
+                const bFeat = b.name?.toLowerCase().includes("bangtao");
+                if (aFeat && !bFeat) return -1;
+                if (!aFeat && bFeat) return 1;
+                return (b.upvotes || 0) - (a.upvotes || 0);
+            });
 
-            const sortGyms = (data) => {
-                return [...data].sort((a, b) => {
-                    const aName = a.name?.toLowerCase() || "";
-                    const bName = b.name?.toLowerCase() || "";
-                    if (aName.includes("bangtao") && !bName.includes("bangtao")) return -1;
-                    if (!aName.includes("bangtao") && bName.includes("bangtao")) return 1;
-                    return (b.upvotes || 0) - (a.upvotes || 0) || aName.localeCompare(bName);
-                });
-            };
-
-            // PRIORITIZE REST ROUND™ IN GEAR LIST
-            const sortGear = (data) => {
-                return [...data].sort((a, b) => {
-                    const aBrand = a.brand_name?.toLowerCase() || "";
-                    const bBrand = b.brand_name?.toLowerCase() || "";
-                    const isARestRound = aBrand.includes("rest round");
-                    const isBRestRound = bBrand.includes("rest round");
-                    if (isARestRound && !isBRestRound) return -1;
-                    if (!isARestRound && isBRestRound) return 1;
-                    return 0;
-                });
-            };
+            const sortGear = (data) => [...data].sort((a, b) => {
+                const aRR = a.brand_name?.toLowerCase().includes("rest round");
+                const bRR = b.brand_name?.toLowerCase().includes("rest round");
+                if (aRR && !bRR) return -1;
+                if (!aRR && bRR) return 1;
+                return 0;
+            });
 
             const loadData = async () => {
                 setLoading(true);
@@ -190,7 +215,7 @@
                 if (isLogin) {
                     const { error } = await supabase.auth.signInWithPassword({ email, password });
                     if (error) setAuthError(error.message);
-                    else { setShowPassport(true); setView('gyms'); }
+                    else { setShowAuthModal(false); setShowProfilePanel(true); }
                 } else {
                     if (password !== confirmPassword) { setAuthError("Passwords do not match."); return; }
                     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
@@ -199,478 +224,916 @@
                         if (data.user) {
                             await supabase.from('profiles').insert([{ id: data.user.id, full_name: fullName || "Athlete", username: email.split('@')[0], home_gym: "Not Set" }]);
                         }
-                        setAuthError("Success! Check email for activation.");
+                        setAuthError("Check your email to confirm your account.");
                         setIsLogin(true);
                     }
                 }
             };
 
+            const myProfile = profiles.find(p => p.id === user?.id) || {};
+
             const handleUpdateProfile = async () => {
                 if (!user) return;
-                const { error } = await supabase.from('profiles').update({ home_gym: editHomeGym, current_gym: editCurrentGym, planned_gyms: editPlannedGyms }).eq('id', user.id);
-                if (error) setAuthError(error.message);
-                else { loadData(); setIsEditingProfile(false); }
+                const { error } = await supabase.from('profiles').update(editFields).eq('id', user.id);
+                if (!error) { await loadData(); setIsEditingProfile(false); }
             };
 
-            const toggleSponsorReveal = (id) => {
-                const newSet = new Set(revealedSponsors);
-                newSet.has(id) ? newSet.delete(id) : newSet.add(id);
-                setRevealedSponsors(newSet);
+            const handleShareFight = (f) => {
+                const url = `${window.location.origin}${window.location.pathname}?view=fights&id=${f.id}`;
+                navigator.clipboard?.writeText(url).catch(() => {
+                    const ta = document.createElement("textarea");
+                    ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+                });
+                setCopiedShareId(f.id); setTimeout(() => setCopiedShareId(null), 2000);
             };
 
-            const toggleFightReveal = (id) => {
-                const newSet = new Set(revealedFights);
-                newSet.has(id) ? newSet.delete(id) : newSet.add(id);
-                setRevealedFights(newSet);
-            };
+            const dynamicCities = useMemo(() => {
+                const locs = [
+                    ...gyms.map(g => g.city_country || g.city).filter(Boolean),
+                    ...profiles.map(p => p.city).filter(Boolean)
+                ];
+                return [...new Set(locs)].sort();
+            }, [gyms, profiles]);
 
-            const handleShareFight = (fight) => {
-                const url = `${window.location.origin}${window.location.pathname}?view=fights&id=${fight.id}`;
-                const textArea = document.body.appendChild(document.createElement("textarea"));
-                textArea.value = url;
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                setCopiedShareId(fight.id);
-                setTimeout(() => setCopiedShareId(null), 2000);
-            };
-
-            const myProfile = profiles.find(p => p.id === user?.id) || { full_name: "Athlete", username: "HOLDER", avatar_url: "https://dmxg5wxfqgb4u.cloudfront.net/styles/athlete_bio_full_body/s3/2023-02/VOLKANOVSKI_ALEXANDER_L_02-11.png" };
-
-            useEffect(() => {
-                if (user && myProfile) {
-                    setEditHomeGym(myProfile.home_gym || "");
-                    setEditCurrentGym(myProfile.current_gym || "");
-                    setEditPlannedGyms(myProfile.planned_gyms || "");
-                }
-            }, [user, myProfile.id]);
-
+            // ---- FILTERED DATA ----
             const filteredGyms = gyms.filter(g => {
-                const locStr = `${g.city} ${g.location} ${g.city_country}`.toLowerCase();
-                const matchesCity = activeCity === "Where" || locStr.includes(activeCity.toLowerCase());
-                const matchesType = activeType === "All" || g.disciplines?.toLowerCase().includes(activeType.toLowerCase());
-                return matchesCity && matchesType && g.name.toLowerCase().includes(searchQuery.toLowerCase());
+                const loc = `${g.city} ${g.location} ${g.city_country}`.toLowerCase();
+                const matchCity = activeCity === "All" || loc.includes(activeCity.toLowerCase());
+                const matchType = activeType === "All" || g.disciplines?.toLowerCase().includes(activeType.toLowerCase());
+                return matchCity && matchType && g.name?.toLowerCase().includes(searchQuery.toLowerCase());
+            });
+
+            const filteredFighters = profiles.filter(p => {
+                const matchCity = activeCity === "All" || (p.city || "").toLowerCase().includes(activeCity.toLowerCase());
+                const matchType = activeType === "All" || (p.disciplines || "").toLowerCase().includes(activeType.toLowerCase());
+                const matchSearch = (p.full_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (p.username || "").toLowerCase().includes(searchQuery.toLowerCase());
+                return matchCity && matchType && matchSearch;
             });
 
             const filteredFights = fights.filter(f => {
-                const locStr = `${f.city} ${f.location}`.toLowerCase();
-                const matchesCity = activeCity === "Where" || locStr.includes(activeCity.toLowerCase());
-                const matchesType = activeType === "All" || f.fight_type?.toLowerCase().includes(activeType.toLowerCase());
-                return matchesCity && matchesType && f.event_name.toLowerCase().includes(searchQuery.toLowerCase());
+                const loc = `${f.city} ${f.location}`.toLowerCase();
+                const matchCity = activeCity === "All" || loc.includes(activeCity.toLowerCase());
+                const matchType = activeType === "All" || f.fight_type?.toLowerCase().includes(activeType.toLowerCase());
+                return matchCity && matchType && f.event_name?.toLowerCase().includes(searchQuery.toLowerCase());
             });
 
-            const filteredGear = gear.filter(item => item.brand_name?.toLowerCase().includes(searchQuery.toLowerCase()) || item.product_name?.toLowerCase().includes(searchQuery.toLowerCase()));
-            const filteredSponsors = sponsors.filter(s => s.brand_name?.toLowerCase().includes(searchQuery.toLowerCase()) || s.focus?.toLowerCase().includes(searchQuery.toLowerCase()));
-
-            const RegisterCTA = ({ title, text }) => (
-                <div onClick={() => setView('auth')} className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-[2.5rem] flex flex-col items-center justify-center text-center cursor-pointer hover:border-black transition-all group">
-                    <Icon name="lock" size={32} className="text-black mb-4 group-hover:scale-110 transition-transform"/>
-                    <h4 className="text-xl font-black italic uppercase text-black leading-none mb-2 tracking-tighter">{title}</h4>
-                    <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-6">{text}</p>
-                    <button className="bg-black text-[#d7df22] px-10 py-3 rounded-full text-[10px] font-black uppercase italic">Sign Up</button>
-                </div>
+            const filteredGear = gear.filter(item =>
+                item.brand_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.product_name?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+            const filteredSponsors = sponsors.filter(s =>
+                s.brand_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                s.focus?.toLowerCase().includes(searchQuery.toLowerCase())
             );
 
-            const AdBox = () => (
-                <div className="bg-black rounded-[2.5rem] p-8 flex flex-col justify-between text-left h-full border border-[#d7df22]/30 shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-[#d7df22] opacity-10 rounded-full blur-3xl group-hover:opacity-20 transition-opacity"></div>
-                    <div>
-                        <span className="bg-[#d7df22] text-black text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest mb-4 inline-block italic">Promoted</span>
-                        <h4 className="text-xl font-black italic uppercase text-white leading-none mb-2 tracking-tighter">REST ROUND™</h4>
-                        <p className="text-[#d7df22] text-[10px] font-black uppercase tracking-[0.2em] mb-6 italic leading-relaxed">High-Performance Hygiene. Engineered for Combat Athletes.</p>
-                        <p className="text-gray-400 text-[11px] leading-relaxed">Stop staph and ringworm before they stop your camp. Our HOCL Skin & Gear spray is the elite standard for recovery hygiene.</p>
-                    </div>
-                    <a href="https://restround.co" target="_blank" className="w-full bg-[#d7df22] text-black py-3 rounded-xl font-black uppercase text-[9px] tracking-[0.2em] text-center shadow-lg transition-all active:scale-95 mt-6 group-hover:bg-white">Shop Rest Round™</a>
-                </div>
-            );
+            // ---- NAV TABS ----
+            const TABS = [
+                { id: 'gyms', label: 'Gyms', icon: 'map-pin' },
+                { id: 'fighters', label: 'Fighters', icon: 'users' },
+                { id: 'fights', label: 'Fights', icon: 'swords' },
+                { id: 'deals', label: 'Deals', icon: 'tag' },
+            ];
 
-            const GlobalAdBanner = () => (
-                <div className="w-full px-4 md:px-12 py-10">
-                    <a 
-                        href="https://restround.co" 
-                        target="_blank"
-                        className="block bg-black rounded-[3rem] p-10 md:p-16 relative overflow-hidden group shadow-2xl border-4 border-[#d7df22]/20 hover:border-[#d7df22] transition-all"
-                    >
-                        <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-[#d7df22]/10 to-transparent"></div>
-                        <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
-                            <div className="text-left space-y-4">
-                                <h2 className="text-4xl md:text-6xl font-black italic uppercase text-white tracking-tighter leading-none">PROTECT YOUR CAMP</h2>
-                                <p className="text-[#d7df22] text-sm md:text-lg font-black uppercase tracking-[0.3em] italic">HOCL Combat Skin & Gear Hygiene</p>
-                            </div>
-                            <div className="flex flex-col items-center gap-4">
-                                <div className="bg-[#d7df22] text-black px-12 py-5 rounded-2xl font-black uppercase italic tracking-widest text-sm group-hover:scale-110 transition-transform">
-                                    Shop REST ROUND™
-                                </div>
-                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Engineered for the Elite</p>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            );
+            const needsFilters = ['gyms', 'fighters', 'fights'].includes(view);
 
-            const GymLink = ({ name }) => {
-                const gym = gyms.find(g => g.name === name);
-                return (
-                    <span className={`cursor-pointer underline decoration-[#d7df22] hover:text-[#d7df22] transition-colors ${!gym ? 'opacity-50 pointer-events-none' : ''}`}
-                        onClick={() => { if(gym) { setSelectedGym(gym); setView('gyms'); setViewedAthlete(null); } }}>{name}</span>
-                );
+            const changeView = (v) => {
+                setView(v); setSearchQuery(""); setActiveCity("All"); setActiveType("All");
+                setShowProfilePanel(false); setSelectedGym(null); setSelectedFighter(null);
             };
 
-            const AvatarStack = ({ gymId, size = "h-8 w-8" }) => {
-                const attendees = profiles.filter(p => p.current_gym_id == gymId).slice(0, 3);
-                return (
-                    <div className={`flex -space-x-3 overflow-hidden justify-center items-center ${size.split(' ')[0]}`}>
-                        {attendees.map((p, i) => (
-                            <img key={i} src={p.avatar_url} className={`inline-block ${size} rounded-full ring-2 ring-white object-cover grayscale shadow-sm`} alt="user" />
-                        ))}
-                        {attendees.length === 0 && <span className="text-xs text-gray-300 font-black">-</span>}
-                    </div>
-                );
-            };
-
+            // =========================================================
+            // RENDER
+            // =========================================================
             return (
                 <div className="min-h-screen bg-white text-black selection-brand font-['Montserrat'] overflow-x-hidden">
-                    {/* NAV */}
-                    <nav className="sticky top-0 z-[100] bg-white border-b border-gray-100 h-16 flex items-center justify-between px-4 md:px-12 shadow-sm">
-                        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => {setView('gyms'); setShowPassport(false); setSelectedGym(null); setSearchQuery(""); setViewedAthlete(null);}}>
-                            <div className="w-10 h-10 md:w-12 md:h-12 bg-black rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg border border-white/10 group-hover:border-[#d7df22] transition-all">
-                                <svg viewBox="0 0 100 100" className="w-full h-full p-1.5"><text x="50%" y="45%" textAnchor="middle" fill="#d7df22" fontFamily="Arial Black, sans-serif" fontSize="18" fontWeight="900" style={{letterSpacing: '-1.5px'}}>FIGHTER</text><text x="50%" y="82%" textAnchor="middle" fill="#d7df22" fontFamily="Arial Black, sans-serif" fontSize="36" fontWeight="900" style={{letterSpacing: '-1.5px'}}>LIST</text></svg>
-                            </div>
-                            <div className="text-xl md:text-2xl font-black italic uppercase tracking-tighter leading-none whitespace-nowrap">FIGHTER LIST</div>
-                        </div>
 
-                        <div className="flex gap-1 md:gap-2 bg-gray-50 p-1 rounded-full shadow-inner border border-gray-100 scale-90 sm:scale-100">
-                            {['gyms', 'fights', 'gear', 'sponsors'].map(id => (
-                                <button key={id} onClick={() => {setView(id); setShowPassport(false); setViewedAthlete(null);}} className={`flex items-center gap-2 px-3 sm:px-5 py-2 rounded-full text-[9px] sm:text-[10px] font-black uppercase transition-all ${view === id && !showPassport ? 'bg-black text-[#d7df22] shadow-lg' : 'text-gray-400'}`}>
-                                    <Icon name={id==='gyms'?'map-pin':id==='fights'?'swords':id==='gear'?'shopping-bag':'target'} size={14} /> <span className="hidden lg:inline">{id.charAt(0).toUpperCase() + id.slice(1)}</span>
+                    {/* ── NAV ─────────────────────────────────────── */}
+                    <nav className="sticky top-0 z-[100] bg-white border-b border-gray-100 h-16 flex items-center justify-between px-4 md:px-12 shadow-sm">
+                        {/* Logo */}
+                        <button className="flex items-center gap-3 group shrink-0" onClick={() => changeView('gyms')}>
+                            <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shadow-lg border-2 border-transparent group-hover:border-[#d7df22] transition-all overflow-hidden">
+                                <svg viewBox="0 0 100 100" className="w-full h-full p-1.5">
+                                    <text x="50%" y="45%" textAnchor="middle" fill="#d7df22" fontFamily="Arial Black, sans-serif" fontSize="18" fontWeight="900" style={{letterSpacing:'-1.5px'}}>FIGHTER</text>
+                                    <text x="50%" y="82%" textAnchor="middle" fill="#d7df22" fontFamily="Arial Black, sans-serif" fontSize="36" fontWeight="900" style={{letterSpacing:'-1.5px'}}>LIST</text>
+                                </svg>
+                            </div>
+                            <span className="text-xl font-black italic uppercase tracking-tighter leading-none hidden sm:block">FIGHTER LIST</span>
+                        </button>
+
+                        {/* Tabs */}
+                        <div className="flex gap-0.5 bg-gray-50 p-1 rounded-full shadow-inner border border-gray-100">
+                            {TABS.map(tab => (
+                                <button key={tab.id} onClick={() => changeView(tab.id)}
+                                    className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full text-[9px] sm:text-[10px] font-black uppercase transition-all ${view === tab.id && !showProfilePanel ? 'bg-black text-[#d7df22] shadow-md' : 'text-gray-400 hover:text-black'}`}>
+                                    <Icon name={tab.icon} size={13} />
+                                    <span className="hidden md:inline">{tab.label}</span>
                                 </button>
                             ))}
                         </div>
-                        <button onClick={() => user ? setShowPassport(!showPassport) : setView('auth')} className={`p-2.5 rounded-full shadow-lg transition-all active:scale-90 ${showPassport || view === 'auth' ? 'bg-[#d7df22] text-black border-2 border-black/5' : 'bg-black text-[#d7df22]'}`}>
+
+                        {/* User button */}
+                        <button onClick={() => user ? setShowProfilePanel(!showProfilePanel) : setShowAuthModal(true)}
+                            className={`p-2.5 rounded-full shadow-md transition-all active:scale-90 shrink-0 ${showProfilePanel ? 'bg-[#d7df22] text-black' : 'bg-black text-[#d7df22]'}`}>
                             <Icon name="user" size={20} />
                         </button>
                     </nav>
 
-                    {/* SEARCH & FILTERS BAR */}
-                    {!showPassport && !viewedAthlete && view !== 'auth' && (
-                        <div className="w-full px-4 md:px-12 py-6 flex flex-col md:flex-row gap-4 items-center animate-fade-in max-w-[1400px] mx-auto">
-                            {(view === 'gyms' || view === 'fights') && (
-                                <div className="flex gap-2 w-full md:w-auto">
-                                    <div className="relative flex-1 md:min-w-[160px] group">
-                                        <Icon name="map-pin" size={14} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-hover:text-red-500 transition-colors" />
-                                        <select value={activeCity} onChange={(e) => setActiveCity(e.target.value)} className="w-full bg-gray-50 border-2 border-transparent hover:border-black p-4 pl-10 pr-8 rounded-full font-black uppercase text-[10px] tracking-widest outline-none cursor-pointer transition-all shadow-inner text-center">
-                                            <option>Where</option>
-                                            {dynamicCities.map(city => <option key={city} value={city}>{city}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="relative flex-1 md:min-w-[140px] group">
-                                        <Icon name="swords" size={14} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-hover:text-black transition-colors" />
-                                        <select value={activeType} onChange={(e) => setActiveType(e.target.value)} className="w-full bg-gray-50 border-2 border-transparent hover:border-black p-4 pl-10 pr-8 rounded-full font-black uppercase text-[10px] tracking-widest outline-none cursor-pointer transition-all shadow-inner text-center">
-                                            <option>All</option>
-                                            <option>MMA</option><option>Muay Thai</option><option>BJJ</option><option>Boxing</option><option>Wrestling</option>
-                                        </select>
-                                    </div>
+                    {/* ── SEARCH & FILTERS ────────────────────────── */}
+                    {!showProfilePanel && needsFilters && (
+                        <div className="w-full px-4 md:px-12 pt-5 pb-3 flex flex-col sm:flex-row gap-3 items-center max-w-[1400px] mx-auto animate-fade-in">
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <div className="relative flex-1 sm:w-44">
+                                    <Icon name="map-pin" size={13} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    <select value={activeCity} onChange={e => setActiveCity(e.target.value)}
+                                        className="w-full bg-gray-50 border-2 border-transparent hover:border-black p-3.5 pl-9 pr-6 rounded-full font-black uppercase text-[9px] tracking-widest outline-none cursor-pointer transition-all">
+                                        <option value="All">All Cities</option>
+                                        {dynamicCities.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
                                 </div>
-                            )}
-                            <div className="relative flex-1 w-full group">
-                                <Icon name="search" size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-black transition-colors" />
-                                <input type="text" placeholder={`Search ${view}...`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-gray-50 border-2 border-transparent focus:border-black focus:bg-white p-4 pl-14 rounded-[2rem] font-bold outline-none transition-all shadow-inner" />
+                                <div className="relative flex-1 sm:w-40">
+                                    <Icon name="swords" size={13} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    <select value={activeType} onChange={e => setActiveType(e.target.value)}
+                                        className="w-full bg-gray-50 border-2 border-transparent hover:border-black p-3.5 pl-9 pr-6 rounded-full font-black uppercase text-[9px] tracking-widest outline-none cursor-pointer transition-all">
+                                        <option value="All">All Styles</option>
+                                        <option>MMA</option><option>Muay Thai</option><option>BJJ</option><option>Boxing</option><option>Wrestling</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="relative flex-1 w-full">
+                                <Icon name="search" size={17} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300" />
+                                <input type="text" placeholder={`Search ${view}...`} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                                    className="w-full bg-gray-50 border-2 border-transparent focus:border-black focus:bg-white p-3.5 pl-12 rounded-full font-bold outline-none transition-all" />
                             </div>
                         </div>
                     )}
 
-                    <main className="w-full px-4 md:px-12 py-4 min-h-[60vh] max-w-[1400px] mx-auto">
+                    {/* ── MAIN ────────────────────────────────────── */}
+                    <main className="w-full px-4 md:px-12 py-6 min-h-[60vh] max-w-[1400px] mx-auto">
                         {loading ? (
-                            <div className="py-20 text-gray-400 font-black uppercase tracking-[0.3em] animate-pulse italic text-center">Connecting Intelligence...</div>
-                        ) : viewedAthlete ? (
-                            <div className="max-w-2xl mx-auto py-6 animate-slide-up">
-                                <button onClick={() => setViewedAthlete(null)} className="mb-8 flex items-center gap-2 font-black uppercase italic text-[10px] text-gray-400 hover:text-black transition-colors">
-                                    <Icon name="arrow-left" size={16} /> Return to Intelligence Feed
-                                </button>
-                                <div className="bg-white rounded-[3rem] overflow-hidden shadow-2xl border border-gray-100">
-                                    <div className="bg-black p-12 text-center relative text-white">
-                                        <img src={viewedAthlete.avatar_url} className="w-40 h-40 rounded-full border-4 border-[#d7df22] mx-auto mb-8 object-cover bg-gray-900 shadow-2xl" alt="Athlete" />
-                                        <h2 className="text-4xl font-black italic uppercase text-white tracking-tighter leading-none">{viewedAthlete.full_name}</h2>
-                                        <a href={`https://instagram.com/${viewedAthlete.username}`} target="_blank" className="text-[#d7df22] text-[10px] font-black uppercase tracking-[0.4em] mt-4 bg-white/10 px-6 py-2 rounded-full inline-block italic hover:bg-[#d7df22] hover:text-black transition-all">@{viewedAthlete.username || "athlete"}</a>
-                                    </div>
-                                    <div className="p-12 space-y-12 bg-white text-black text-left">
-                                        <div className="space-y-4">
-                                            <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b pb-3 text-left">
-                                                <Icon name="home" className="text-[#d7df22]" size={16}/> Home Gym Base
-                                            </div>
-                                            <div className="bg-black p-8 rounded-[2.5rem] border-2 border-[#d7df22]/20 flex justify-between items-center shadow-2xl text-left">
-                                                <div className="text-white text-left">
-                                                    <p className="text-[9px] font-black text-[#d7df22] uppercase mb-1 italic">Dossier Sector</p>
-                                                    <h4 className="text-2xl font-black uppercase italic leading-none"><GymLink name={viewedAthlete.home_gym || "Not Set"} /></h4>
-                                                </div>
-                                                <Icon name="award" className="text-[#d7df22]" size={24} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <div className="py-32 text-center text-gray-300 font-black uppercase tracking-[0.4em] text-sm animate-pulse italic">Loading Intelligence…</div>
+                        ) : showProfilePanel && user ? (
+                            // ── PROFILE PANEL ─────────────────────
+                            <ProfilePanel
+                                myProfile={myProfile}
+                                user={user}
+                                gyms={gyms}
+                                isEditing={isEditingProfile}
+                                editFields={editFields}
+                                setEditFields={setEditFields}
+                                onEdit={() => { setEditFields({...myProfile}); setIsEditingProfile(true); }}
+                                onSave={handleUpdateProfile}
+                                onCancel={() => setIsEditingProfile(false)}
+                                onSignOut={() => { supabase.auth.signOut(); setShowProfilePanel(false); }}
+                            />
                         ) : (
-                          <div className="animate-fade-in text-center">
-                            {/* AUTH VIEW */}
-                            {view === 'auth' && !user && (
-                                <div className="max-w-md mx-auto py-10 text-left text-black">
-                                    <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 p-10">
-                                        <h2 className="text-3xl font-black italic uppercase mb-2 tracking-tighter leading-none text-black">{isLogin ? "Athlete Login" : "Sign Up"}</h2>
-                                        <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-8">Join the elite combat directory</p>
-                                        <form onSubmit={handleAuth} className="space-y-4">
-                                            {!isLogin && (
-                                                <div>
-                                                    <p className="text-[8px] font-black text-gray-400 uppercase mb-1 ml-2 tracking-widest">Full Name</p>
-                                                    <input type="text" placeholder="Alex Volkanovski" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black shadow-inner" required />
-                                                </div>
-                                            )}
-                                            <div>
-                                                <p className="text-[8px] font-black text-gray-400 uppercase mb-1 ml-2 tracking-widest text-black">Email</p>
-                                                <input type="email" placeholder="athlete@fighterlist.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black shadow-inner" required />
-                                            </div>
-                                            <div>
-                                                <p className="text-[8px] font-black text-gray-400 uppercase mb-1 ml-2 tracking-widest text-black">Password</p>
-                                                <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-black text-black shadow-inner" required />
-                                            </div>
-                                            {authError && <p className="text-[10px] font-black uppercase tracking-tight text-red-500">{authError}</p>}
-                                            <button type="submit" className="w-full bg-black text-[#d7df22] py-5 rounded-[1.5rem] font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all">{isLogin ? "Enter Dashboard" : "Sign Up"}</button>
-                                            <p className="text-center text-[9px] font-black uppercase text-gray-400 cursor-pointer pt-2" onClick={() => { setIsLogin(!isLogin); setAuthError(""); }}>{isLogin ? "New athlete? Register here" : "Already registered? Login"}</p>
-                                        </form>
-                                    </div>
-                                </div>
-                            )}
+                            <div className="animate-fade-in">
 
-                            {/* PASSPORT VIEW (MY PROFILE) */}
-                            {showPassport && user && (
-                                <div className="max-w-2xl mx-auto py-6 text-left animate-slide-up text-black">
-                                    <div className="bg-white rounded-[3rem] overflow-hidden shadow-2xl border border-gray-100">
-                                        <div className="bg-black p-12 text-center relative text-white">
-                                            <button onClick={() => {supabase.auth.signOut(); setShowPassport(false);}} className="absolute top-6 right-6 text-[#d7df22] hover:text-white transition-colors"><Icon name="log-out" size={18} /></button>
-                                            <img src={myProfile.avatar_url} className="w-32 h-32 rounded-full border-4 border-[#d7df22] mx-auto mb-6 object-cover bg-gray-900 shadow-2xl" alt="Athlete" />
-                                            <h2 className="text-3xl font-black italic uppercase text-white tracking-tighter leading-none">{myProfile.full_name}</h2>
-                                            <a href={`https://instagram.com/${myProfile.username}`} target="_blank" className="text-[#d7df22] text-[10px] font-black uppercase tracking-[0.4em] mt-3 bg-white/10 px-6 py-2 rounded-full inline-block italic hover:bg-[#d7df22] hover:text-black transition-all">@{myProfile.username}</a>
-                                        </div>
-                                        <div className="p-12 space-y-12 bg-white text-black text-left">
-                                            <div className="space-y-4 text-left">
-                                                <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest border-b pb-3 text-left text-black"><Icon name="home" className="text-[#d7df22]" size={16}/> Home Gym Dossier</div>
-                                                {isEditingProfile ? (
-                                                    <div className="space-y-6">
-                                                        <div className="space-y-2"><p className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-4">Home Gym</p><input type="text" value={editHomeGym} onChange={(e) => setEditHomeGym(e.target.value)} placeholder="Home Gym Name" className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 outline-none font-black uppercase italic text-sm text-black shadow-inner" /></div>
-                                                        <div className="space-y-2"><p className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-4">Here Now</p><input type="text" value={editCurrentGym} onChange={(e) => setEditCurrentGym(e.target.value)} placeholder="Live Gym Name" className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 outline-none font-black uppercase italic text-sm text-black shadow-inner" /></div>
-                                                        <div className="space-y-2"><p className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-4">Visit Soon</p><input type="text" value={editPlannedGyms} onChange={(e) => setEditPlannedGyms(e.target.value)} placeholder="Planned Gym Name" className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 outline-none font-black uppercase italic text-sm text-black shadow-inner" /></div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="bg-black p-8 rounded-[2.5rem] border-2 border-[#d7df22]/20 flex justify-between items-center shadow-2xl text-left">
-                                                        <div className="text-white text-left"><p className="text-[9px] font-black text-[#d7df22] uppercase mb-1 italic text-left">Current Base</p><h4 className="text-2xl font-black uppercase italic leading-none"><GymLink name={myProfile.home_gym || "Not Set"} /></h4></div>
-                                                        <Icon name="award" className="text-[#d7df22]" size={24} />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="flex gap-4">
-                                                {isEditingProfile ? <button onClick={handleUpdateProfile} className="flex-1 bg-black text-[#d7df22] py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest shadow-2xl">Save Changes</button> : <button onClick={() => setIsEditingProfile(true)} className="w-full bg-black text-white py-6 rounded-[1.5rem] font-black uppercase italic text-xs tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all"><Icon name="settings" size={18}/> Manage Dossier</button>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                                {/* ── GYMS ── */}
+                                {view === 'gyms' && (
+                                    <GymsView
+                                        gyms={filteredGyms}
+                                        profiles={profiles}
+                                        user={user}
+                                        onSignUp={() => setShowAuthModal(true)}
+                                        onSelect={setSelectedGym}
+                                    />
+                                )}
 
-                            {/* GYMS GRID */}
-                            {view === 'gyms' && !showPassport && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 text-left w-full text-black">
-                                    {filteredGyms.map((gym, idx) => {
-                                        const elements = [];
-                                        if (idx === 3) elements.push(<AdBox key="ad-box" />);
-                                        elements.push(
-                                            <div key={gym.id} className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-xl cursor-pointer hover:shadow-2xl transition-all group flex flex-col h-full" onClick={() => setSelectedGym(gym)}>
-                                                <div className="relative h-64 overflow-hidden bg-gray-50 shrink-0">
-                                                    <img src={gym.image_url || "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=800"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="gym" />
-                                                    <div className="absolute top-4 left-4 flex gap-1">{gym.name?.toLowerCase().includes("bangtao") && <span className="bg-[#d7df22] text-black text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest shadow-lg italic">Featured</span>}</div>
-                                                </div>
-                                                <div className="p-8 flex flex-col flex-1">
-                                                    <div className="flex items-center gap-1.5 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-1 truncate"><Icon name="map-pin" size={12} className="text-red-500" /> {gym.city_country || gym.city || gym.location}</div>
-                                                    <h3 className="text-xl font-black italic uppercase leading-tight mb-6 truncate">{gym.name}</h3>
-                                                    <div className="grid grid-cols-3 gap-1 py-4 border-y border-gray-50 mb-6 text-center">
-                                                        <div className="border-r border-gray-50 space-y-2 hover:bg-gray-50 transition-colors py-1 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); setSocialExpand({ gymId: gym.id, category: 'Here Now' }); }}><p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter italic">Here Now</p><AvatarStack gymId={gym.id} size="h-8 w-8" /></div>
-                                                        <div className="border-r border-gray-50 space-y-2 hover:bg-gray-50 transition-colors py-1 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); setSocialExpand({ gymId: gym.id, category: 'Visit Soon' }); }}><p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter italic">Visit Soon</p><span className="text-xl font-black leading-none">-</span></div>
-                                                        <div className="space-y-2 hover:bg-gray-50 transition-colors py-1 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); setSocialExpand({ gymId: gym.id, category: 'Was Here' }); }}><p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter italic">Was Here</p><span className="text-xl font-black leading-none">-</span></div>
-                                                    </div>
-                                                    <button className="w-full bg-black text-[#d7df22] py-3 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] shadow-md mt-auto">Details</button>
-                                                </div>
-                                            </div>
-                                        );
-                                        return elements;
-                                    })}
-                                </div>
-                            )}
+                                {/* ── FIGHTERS ── */}
+                                {view === 'fighters' && (
+                                    <FightersView
+                                        fighters={filteredFighters}
+                                        user={user}
+                                        onSignUp={() => setShowAuthModal(true)}
+                                        onSelect={setSelectedFighter}
+                                    />
+                                )}
 
-                            {/* GEAR SECTION */}
-                            {view === 'gear' && (
-                                <div className="space-y-10 text-left">
-                                    <h2 className="text-3xl font-black italic uppercase tracking-tighter">GEAR DISCOUNTS</h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                                        {(user ? filteredGear : filteredGear.slice(0, 5)).map((item, i) => {
-                                            const elements = [];
-                                            if (i === 3) elements.push(<AdBox key="ad-box-gear" />);
-                                            elements.push(
-                                                <div key={i} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all h-full">
-                                                    <div>
-                                                        <div className="flex justify-between items-start mb-6">
-                                                            <span className="bg-[#d7df22] text-black px-4 py-1 rounded-full text-[10px] font-black uppercase inline-block">-{item.discount_amount}</span>
-                                                        </div>
-                                                        <h3 className="text-2xl font-black italic uppercase leading-none mb-1">{item.brand_name || "Official Partner"}</h3>
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest italic mb-8">{item.product_name}</p>
-                                                        <div className="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-100 flex justify-between items-center mb-8 font-mono font-black text-xl shadow-inner text-black text-center">
-                                                            <span>{item.discount_code}</span>
-                                                            <CopyButton text={item.discount_code} showText={true} />
-                                                        </div>
-                                                    </div>
-                                                    <button onClick={() => window.open(item.affiliate_url)} className="w-full bg-black text-[#d7df22] py-4 rounded-2xl font-black uppercase italic tracking-widest shadow-lg">Get Deal</button>
-                                                </div>
-                                            );
-                                            return elements;
-                                        })}
-                                        {!user && filteredGear.length >= 5 && <RegisterCTA title="Unlock More Gear" text="See 20+ hidden combat gear discounts" />}
-                                    </div>
-                                </div>
-                            )}
+                                {/* ── FIGHTS ── */}
+                                {view === 'fights' && (
+                                    <FightsView
+                                        fights={filteredFights}
+                                        user={user}
+                                        onSignUp={() => setShowAuthModal(true)}
+                                        fightsTab={fightsTab}
+                                        setFightsTab={setFightsTab}
+                                        revealedFights={revealedFights}
+                                        setRevealedFights={setRevealedFights}
+                                        copiedShareId={copiedShareId}
+                                        onShare={handleShareFight}
+                                    />
+                                )}
 
-                            {/* SPONSORS SECTION */}
-                            {view === 'sponsors' && (
-                                <div className="space-y-10 text-left">
-                                    <a href="https://restround.co/blogs/combat-gear-skin-spray/the-sponsorship-blueprint-how-to-fund-your-fight-career-in-2026" target="_blank" className="block bg-[#d7df22] p-12 rounded-[3rem] text-black shadow-2xl relative overflow-hidden group">
-                                        <div className="absolute right-[-5%] top-[-10%] opacity-10 rotate-12 text-black group-hover:scale-110 transition-transform"><Icon name="target" size={250} /></div>
-                                        <h2 className="text-4xl md:text-6xl font-black italic uppercase mb-4 tracking-tighter leading-none">Sponsors guide</h2>
-                                        <p className="max-w-2xl font-bold text-base uppercase tracking-widest opacity-80 italic">The Sponsorship Blueprint: How to Fund Your Fight Career in 2026. <span className="underline">Read Dossier</span></p>
-                                    </a>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                                        {(user ? filteredSponsors : filteredSponsors.slice(0, 5)).map((s, i) => {
-                                            const elements = [];
-                                            if (i === 3) elements.push(<AdBox key="ad-box-sponsor" />);
-                                            elements.push(
-                                                <div key={s.id} className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between hover:border-black transition-all">
-                                                    <div className="text-left">
-                                                        <h3 className="text-2xl font-black italic uppercase mb-2 leading-none">{s.brand_name}</h3>
-                                                        <p className="text-[#d7df22] font-black uppercase text-[9px] tracking-[0.2em] bg-black inline-block px-4 py-1 rounded-full mb-10 italic">{s.focus || "Partner"}</p>
-                                                        <div className="space-y-4 mb-10">
-                                                            <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 shadow-inner">
-                                                                <p className="text-[9px] font-black text-gray-400 uppercase mb-2 tracking-widest italic">Requirement</p>
-                                                                <p className="text-[11px] font-bold leading-relaxed">{s.requirement || "Active status required."}</p>
-                                                            </div>
-                                                            <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 shadow-inner">
-                                                                <p className="text-[9px] font-black text-gray-400 uppercase mb-2 tracking-widest italic">Offer</p>
-                                                                <p className="text-[11px] font-bold leading-relaxed">{s.offer || "Product kit + commissions"}</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="mt-auto">
-                                                        {!revealedSponsors.has(s.id) ? <button onClick={() => toggleSponsorReveal(s.id)} className="w-full py-4 rounded-2xl font-black uppercase italic tracking-widest text-[11px] bg-black text-white hover:bg-[#d7df22] hover:text-black transition-all shadow-xl">Contact</button> : <div className="flex items-center gap-3 bg-black text-white p-3 rounded-2xl animate-fade-in shadow-lg"><span className="text-[11px] font-black italic px-2 flex-1 truncate">{s.email || 'team.restround@gmail.com'}</span><CopyButton text={s.email || 'team.restround@gmail.com'} size={12} showText={true} customStyle="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg" /><button onClick={() => toggleSponsorReveal(s.id)} className="text-white/40 hover:text-red-500 px-1"><Icon name="x" size={14} /></button></div>}
-                                                    </div>
-                                                </div>
-                                            );
-                                            return elements;
-                                        })}
-                                        {!user && filteredSponsors.length >= 5 && <RegisterCTA title="Unlock More Sponsors" text="Connect with brands looking for talent" />}
-                                    </div>
-                                </div>
-                            )}
+                                {/* ── DEALS ── */}
+                                {view === 'deals' && (
+                                    <DealsView
+                                        gear={filteredGear}
+                                        sponsors={filteredSponsors}
+                                        user={user}
+                                        onSignUp={() => setShowAuthModal(true)}
+                                        dealsTab={dealsTab}
+                                        setDealsTab={setDealsTab}
+                                        revealedSponsors={revealedSponsors}
+                                        setRevealedSponsors={setRevealedSponsors}
+                                    />
+                                )}
 
-                            {/* COMMUNITY UPDATES (FIGHTS) */}
-                            {view === 'fights' && (
-                                <div className="max-w-4xl mx-auto space-y-4 text-left">
-                                    <h2 className="text-3xl font-black italic uppercase mb-8 tracking-tighter">COMMUNITY UPDATES</h2>
-                                    <div className="space-y-3">
-                                        {(user ? filteredFights : filteredFights.slice(0, 5)).map(f => (
-                                            <div key={f.id} className="bg-white border-2 border-black p-3 pr-2 md:p-4 rounded-[2rem] flex items-center relative group animate-fade-in">
-                                                <div className="bg-gray-50 flex flex-col items-center justify-center p-3 rounded-2xl min-w-[75px] md:min-w-[90px] h-[75px] md:h-[90px] border border-gray-100 shadow-inner">
-                                                    <p className="text-xl md:text-2xl font-black italic tracking-tighter leading-none">{f.event_date?.split(' ')[1] || "TBD"}</p>
-                                                </div>
-                                                <div className="flex-1 pl-4 md:pl-6 text-left">
-                                                    <span className="bg-[#d7df22] text-black px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest italic inline-block mb-1">CALL OUT</span>
-                                                    <h3 className="text-sm md:text-xl font-black italic uppercase leading-tight tracking-tighter truncate max-w-[150px] md:max-w-md">{f.event_name}</h3>
-                                                    <p className="text-[9px] md:text-[10px] font-black uppercase text-gray-400 mt-1 italic tracking-widest">{f.fight_type || "Amateur Flyweight"}</p>
-                                                    <p className="text-gray-400 font-bold uppercase text-[9px] flex items-center gap-1 tracking-widest italic mt-1"><Icon name="map-pin" size={10} className="text-red-500" /> {f.city}</p>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    {!revealedFights.has(f.id) ? (
-                                                        <div className="flex items-center gap-2">
-                                                            {/* CONTACT BUTTON */}
-                                                            <button onClick={() => toggleFightReveal(f.id)} className="bg-black text-white px-6 md:px-10 py-3 md:py-4 rounded-[1.5rem] font-black uppercase text-[10px] tracking-widest hover:bg-[#d7df22] hover:text-black transition-all shadow-xl active:scale-95">CONTACT</button>
-                                                            {/* SHARE ICON BUTTON (PLACED BEHIND CONTACT) */}
-                                                            <button 
-                                                                onClick={() => handleShareFight(f)} 
-                                                                className={`p-3 md:p-4 rounded-[1.2rem] transition-all active:scale-95 shadow-lg border border-gray-100 flex items-center justify-center ${copiedShareId === f.id ? 'bg-green-500 text-white' : 'bg-gray-50 text-black hover:bg-black hover:text-[#d7df22]'}`}
-                                                            >
-                                                                <Icon name={copiedShareId === f.id ? "check" : "share-2"} size={16} />
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center gap-2 bg-black text-white p-2 rounded-2xl animate-fade-in shadow-xl mr-2">
-                                                            <span className="text-[10px] font-black italic px-2 truncate max-w-[100px]">{f.contact_info}</span>
-                                                            <CopyButton text={f.contact_info} size={12} customStyle="bg-white/10 hover:bg-white/20 p-2 rounded-lg" />
-                                                            <button onClick={() => toggleFightReveal(f.id)} className="text-white/40 hover:text-red-500 px-1"><Icon name="x" size={14} /></button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {!user && filteredFights.length >= 5 && <div className="mt-8"><RegisterCTA title="Unlock More Fights" text="See full community calendar" /></div>}
-                                    </div>
-                                </div>
-                            )}
-                          </div>
+                            </div>
                         )}
                     </main>
 
-                    {/* REST ROUND™ GLOBAL AD BANNER */}
-                    <GlobalAdBanner />
-
-                    {/* GYM DETAIL MODAL */}
-                    {selectedGym && (
-                        <div className="fixed inset-0 z-[400] flex items-end md:items-center justify-center p-0 md:p-8">
-                            <div className="absolute inset-0 bg-black/85 backdrop-blur-md animate-fade-in" onClick={() => setSelectedGym(null)} />
-                            <div className="relative bg-white w-full max-w-5xl h-[92vh] md:h-full md:max-h-[90vh] rounded-t-[3rem] md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col md:flex-row animate-slide-up">
-                                <button onClick={() => setSelectedGym(null)} className="absolute top-6 right-6 bg-black text-[#d7df22] p-2 rounded-full hover:scale-110 transition-transform z-[500]"><Icon name="x" size={20} /></button>
-                                <div className="md:w-2/5 relative h-64 md:h-auto shrink-0 bg-gray-100 overflow-hidden">
-                                    <img src={selectedGym.image_url || "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=800"} className="w-full h-full object-cover" alt="gym" />
+                    {/* ── REST ROUND FOOTER BANNER ─────────────────── */}
+                    <div className="w-full px-4 md:px-12 py-10">
+                        <a href="https://restround.co" target="_blank"
+                            className="block bg-black rounded-[3rem] p-10 md:p-14 relative overflow-hidden group shadow-2xl border-2 border-[#d7df22]/10 hover:border-[#d7df22]/40 transition-all">
+                            <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-[#d7df22]/10 to-transparent pointer-events-none"></div>
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 relative z-10">
+                                <div className="space-y-3">
+                                    <p className="text-[#d7df22] text-[9px] font-black uppercase tracking-[0.4em] italic">Powered by</p>
+                                    <h2 className="text-4xl md:text-5xl font-black italic uppercase text-white tracking-tighter leading-none">REST ROUND™</h2>
+                                    <p className="text-gray-400 text-sm font-bold uppercase tracking-widest italic">HOCL Combat Skin & Gear Hygiene</p>
                                 </div>
-                                <div className="md:w-3/5 p-8 md:p-12 overflow-y-auto no-scrollbar space-y-10 text-left">
-                                    <div className="space-y-3">
-                                        <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter leading-none">{selectedGym.name}</h2>
-                                        <div className="flex items-center gap-2 text-gray-400 font-bold uppercase text-[11px] tracking-widest italic"><Icon name="map-pin" size={14} className="text-red-500"/> {selectedGym.city_country || selectedGym.location || selectedGym.city}</div>
-                                    </div>
-                                    <div className="bg-[#d7df22]/5 border-2 border-[#d7df22]/20 p-8 rounded-[2.5rem] grid grid-cols-3 gap-1 text-center shadow-inner">
-                                        <div className="border-r border-[#d7df22]/20 space-y-2"><p className="text-[8px] font-black text-gray-400 uppercase italic">Here Now</p><AvatarStack gymId={selectedGym.id} size="h-10 w-10" /></div>
-                                        <div className="border-r border-[#d7df22]/20 space-y-2"><p className="text-[8px] font-black text-gray-400 uppercase italic">Visit Soon</p><span className="text-2xl font-black block leading-none">-</span></div>
-                                        <div className="space-y-2"><p className="text-[8px] font-black text-gray-400 uppercase italic">Was Here</p><span className="text-2xl font-black block leading-none">-</span></div>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                                        <MetricBar label="Hygiene" value={selectedGym.hygiene_score} icon="shield-check" />
-                                        <MetricBar label="Food Safety" value={selectedGym.food_safety} icon="utensils" />
-                                        <MetricBar label="English Speaking" value={selectedGym.english_score} icon="languages" />
-                                        <MetricBar label="Safe for Women" value={selectedGym.safe_for_women} icon="venus" />
-                                    </div>
-                                    <a href={selectedGym.website} target="_blank" className="w-full bg-black text-[#d7df22] py-4 rounded-xl font-black uppercase italic tracking-[0.2em] text-[11px] text-center shadow-lg active:scale-95 transition-all block">Visit Gym Website</a>
+                                <div className="bg-[#d7df22] text-black px-10 py-4 rounded-2xl font-black uppercase italic tracking-widest text-sm group-hover:scale-105 transition-transform shadow-xl whitespace-nowrap">
+                                    Shop Rest Round™ →
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        </a>
+                    </div>
 
-                    <footer className="bg-white py-12 border-t border-gray-100 text-black">
-                        <div className="w-full px-4 md:px-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-[10px] font-black uppercase tracking-[0.2em] italic">
+                    {/* ── FOOTER ───────────────────────────────────── */}
+                    <footer className="border-t border-gray-100 py-10">
+                        <div className="px-4 md:px-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-[10px] font-black uppercase tracking-[0.2em] italic text-gray-400">
                             <div className="flex items-center gap-4">
-                                <a href="https://instagram.com/fighterlist_com" target="_blank" className="hover:scale-110 transition-transform active:scale-90"><InstagramIcon size={16}/></a>
-                                <a href="https://wa.me/66924692066" target="_blank" className="hover:scale-110 transition-transform active:scale-90"><WhatsAppIcon size={16}/></a>
-                                <a href="https://x.com" target="_blank" className="hover:scale-110 transition-transform active:scale-90"><XIcon size={14}/></a>
+                                <a href="https://instagram.com/fighterlist_com" target="_blank" className="hover:text-black transition-colors"><InstagramIcon size={15}/></a>
+                                <a href="https://wa.me/66924692066" target="_blank" className="hover:text-black transition-colors"><WhatsAppIcon size={15}/></a>
+                                <a href="https://x.com" target="_blank" className="hover:text-black transition-colors"><XIcon size={13}/></a>
                             </div>
-                            <span className="text-gray-300 hidden md:inline">/</span>
-                            <a href="mailto:TEAM.RESTROUND@GMAIL.COM" className="hover:text-[#d7df22] transition-colors">TEAM.RESTROUND@GMAIL.COM</a>
-                            <span className="text-gray-300 hidden md:inline">/</span>
-                            <div className="flex items-center gap-2"><span>FIGHTER LIST © 2026</span><span className="opacity-30 ml-1 mr-1">•</span><span>POWERED BY REST ROUND™</span></div>
+                            <span className="hidden md:inline text-gray-200">|</span>
+                            <a href="mailto:TEAM.RESTROUND@GMAIL.COM" className="hover:text-black transition-colors">team.restround@gmail.com</a>
+                            <span className="hidden md:inline text-gray-200">|</span>
+                            <span>Fighter List © 2026 · Powered by Rest Round™</span>
                         </div>
                     </footer>
+
+                    {/* ── GYM MODAL ────────────────────────────────── */}
+                    {selectedGym && (
+                        <GymModal gym={selectedGym} profiles={profiles} onClose={() => setSelectedGym(null)} />
+                    )}
+
+                    {/* ── FIGHTER MODAL ────────────────────────────── */}
+                    {selectedFighter && (
+                        <FighterModal fighter={selectedFighter} gyms={gyms} onClose={() => setSelectedFighter(null)} />
+                    )}
+
+                    {/* ── AUTH MODAL ───────────────────────────────── */}
+                    {showAuthModal && (
+                        <AuthModal
+                            isLogin={isLogin} setIsLogin={setIsLogin}
+                            email={email} setEmail={setEmail}
+                            password={password} setPassword={setPassword}
+                            confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
+                            fullName={fullName} setFullName={setFullName}
+                            authError={authError} setAuthError={setAuthError}
+                            onSubmit={handleAuth}
+                            onClose={() => { setShowAuthModal(false); setAuthError(""); }}
+                        />
+                    )}
                 </div>
             );
         };
+
+        // ============================================================
+        // GYMS VIEW
+        // ============================================================
+        const GymsView = ({ gyms, profiles, user, onSignUp, onSelect }) => {
+            const visible = user ? gyms : gyms.slice(0, 8);
+            return (
+                <div>
+                    <div className="mb-6 flex items-end justify-between">
+                        <div>
+                            <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none">Gyms</h2>
+                            <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">{gyms.length} locations worldwide</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {visible.map((gym, idx) => {
+                            const els = [];
+                            if (idx === 3) els.push(<AdCard key="ad" />);
+                            els.push(
+                                <div key={gym.id} className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-lg cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col" onClick={() => onSelect(gym)}>
+                                    <div className="relative h-52 overflow-hidden bg-gray-100 shrink-0">
+                                        <img src={gym.image_url || "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=600"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={gym.name} />
+                                        {gym.name?.toLowerCase().includes("bangtao") && (
+                                            <span className="absolute top-3 left-3 bg-[#d7df22] text-black text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest italic">Featured</span>
+                                        )}
+                                        {gym.hygiene_score >= 80 && (
+                                            <span className="absolute top-3 right-3 bg-black text-[#d7df22] text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest italic">Clean ✓</span>
+                                        )}
+                                    </div>
+                                    <div className="p-6 flex flex-col flex-1">
+                                        <div className="flex items-center gap-1 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-1">
+                                            <Icon name="map-pin" size={11} className="text-red-500" />{gym.city_country || gym.city || gym.location}
+                                        </div>
+                                        <h3 className="text-lg font-black italic uppercase leading-tight mb-4 truncate">{gym.name}</h3>
+
+                                        {/* Who's here */}
+                                        <div className="grid grid-cols-3 gap-1 py-3 border-y border-gray-100 mb-4 text-center">
+                                            <div className="space-y-1.5">
+                                                <p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter">Here Now</p>
+                                                <AvatarStack gymId={gym.id} profiles={profiles} />
+                                            </div>
+                                            <div className="space-y-1.5 border-x border-gray-100">
+                                                <p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter">Visit Soon</p>
+                                                <span className="text-lg font-black leading-none block">—</span>
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter">Was Here</p>
+                                                <span className="text-lg font-black leading-none block">—</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Hygiene bar preview */}
+                                        <div className="mb-4">
+                                            <MetricBar label="Hygiene" value={gym.hygiene_score} icon="shield-check" />
+                                        </div>
+
+                                        <button className="w-full bg-black text-[#d7df22] py-2.5 rounded-xl font-black uppercase text-[9px] tracking-[0.2em] mt-auto hover:bg-[#d7df22] hover:text-black transition-colors">View Details</button>
+                                    </div>
+                                </div>
+                            );
+                            return els;
+                        })}
+                        {!user && gyms.length > 8 && (
+                            <RegisterCTA title="See All Gyms" text={`${gyms.length - 8} more gyms unlocked`} onSignUp={onSignUp} />
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================================
+        // FIGHTERS VIEW  (NEW)
+        // ============================================================
+        const FightersView = ({ fighters, user, onSignUp, onSelect }) => {
+            const visible = user ? fighters : fighters.slice(0, 8);
+
+            // Mock data if DB has none yet
+            const mockFighters = [
+                { id: 'mock1', full_name: 'Alex V.', username: 'alexv_mma', city: 'Phuket, TH', disciplines: 'MMA, Muay Thai', weight_class: 'Featherweight', open_to: 'Sparring, Fights', avatar_url: '' },
+                { id: 'mock2', full_name: 'Kai Santos', username: 'kaisantos_bjj', city: 'Bangkok, TH', disciplines: 'BJJ, Wrestling', weight_class: 'Middleweight', open_to: 'Sparring, Sponsors', avatar_url: '' },
+                { id: 'mock3', full_name: 'Maya Torres', username: 'maya_boxing', city: 'Chiang Mai, TH', disciplines: 'Boxing', weight_class: 'Flyweight', open_to: 'Fights, Sponsors', avatar_url: '' },
+                { id: 'mock4', full_name: 'Ryan Burke', username: 'ryan_muaythai', city: 'Amsterdam, NL', disciplines: 'Muay Thai', weight_class: 'Welterweight', open_to: 'Sparring', avatar_url: '' },
+            ];
+
+            const display = visible.length > 0 ? visible : (user ? [] : mockFighters);
+
+            const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) || '?';
+
+            return (
+                <div>
+                    <div className="mb-6 flex items-end justify-between">
+                        <div>
+                            <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none">Fighters</h2>
+                            <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">Find sparring partners, training camps & talent</p>
+                        </div>
+                    </div>
+
+                    {display.length === 0 && user && (
+                        <div className="py-20 text-center">
+                            <p className="text-gray-300 font-black uppercase tracking-widest text-sm italic">No fighters found. Be the first to complete your profile.</p>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {display.map((f, idx) => {
+                            const els = [];
+                            if (idx === 3) els.push(<AdCard key="ad" />);
+                            els.push(
+                                <div key={f.id} onClick={() => onSelect(f)}
+                                    className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-lg cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col">
+                                    {/* Avatar */}
+                                    <div className="relative bg-gray-50 h-48 flex items-center justify-center overflow-hidden">
+                                        {f.avatar_url ? (
+                                            <img src={f.avatar_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={f.full_name} />
+                                        ) : (
+                                            <div className="w-20 h-20 rounded-full bg-black flex items-center justify-center">
+                                                <span className="text-[#d7df22] text-xl font-black italic">{getInitials(f.full_name)}</span>
+                                            </div>
+                                        )}
+                                        {/* Open to badge */}
+                                        {f.open_to && (
+                                            <div className="absolute bottom-3 left-3 right-3 flex gap-1 flex-wrap">
+                                                {f.open_to.split(',').map(o => o.trim()).slice(0,2).map(o => (
+                                                    <span key={o} className="bg-black/80 backdrop-blur text-[#d7df22] text-[7px] font-black px-2 py-0.5 rounded uppercase tracking-widest">{o}</span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-6 flex flex-col flex-1">
+                                        <div className="flex items-center gap-1 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-1">
+                                            <Icon name="map-pin" size={11} className="text-red-500" />{f.city || 'Location TBD'}
+                                        </div>
+                                        <h3 className="text-lg font-black italic uppercase leading-tight mb-1">{f.full_name}</h3>
+                                        {f.username && (
+                                            <p className="text-[9px] font-black text-gray-400 tracking-widest mb-3">@{f.username}</p>
+                                        )}
+                                        {/* Disciplines */}
+                                        <div className="flex flex-wrap gap-1 mb-4">
+                                            {(f.disciplines || '').split(',').map(d => d.trim()).filter(Boolean).map(d => (
+                                                <span key={d} className="bg-gray-100 text-gray-600 text-[7px] font-black px-2 py-0.5 rounded uppercase tracking-widest">{d}</span>
+                                            ))}
+                                            {f.weight_class && (
+                                                <span className="bg-[#d7df22] text-black text-[7px] font-black px-2 py-0.5 rounded uppercase tracking-widest">{f.weight_class}</span>
+                                            )}
+                                        </div>
+                                        <button className="w-full bg-black text-[#d7df22] py-2.5 rounded-xl font-black uppercase text-[9px] tracking-[0.2em] mt-auto hover:bg-[#d7df22] hover:text-black transition-colors">View Profile</button>
+                                    </div>
+                                </div>
+                            );
+                            return els;
+                        })}
+                        {!user && (
+                            <RegisterCTA title="See All Fighters" text="Find sparring partners in your city" onSignUp={onSignUp} />
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================================
+        // FIGHTS VIEW  (split: matchmaking + events)
+        // ============================================================
+        const FightsView = ({ fights, user, onSignUp, fightsTab, setFightsTab, revealedFights, setRevealedFights, copiedShareId, onShare }) => {
+            const toggle = (id) => {
+                const s = new Set(revealedFights); s.has(id) ? s.delete(id) : s.add(id); setRevealedFights(s);
+            };
+
+            // split: events have a proper event_date; matchmaking = "call outs" or no date
+            const matchmaking = fights.filter(f => !f.event_date || f.is_callout);
+            const events = fights.filter(f => f.event_date && !f.is_callout);
+            const display = fightsTab === 'matchmaking' ? matchmaking : events;
+            const visibleDisplay = user ? display : display.slice(0, 5);
+
+            return (
+                <div>
+                    <div className="mb-6 flex items-end justify-between">
+                        <div>
+                            <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none">Fights</h2>
+                            <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">Find a fight or a partner</p>
+                        </div>
+                        {user && (
+                            <button className="bg-black text-[#d7df22] px-5 py-2.5 rounded-full font-black uppercase text-[9px] tracking-widest italic hover:bg-[#d7df22] hover:text-black transition-colors">
+                                + Post
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Sub-tabs */}
+                    <div className="flex gap-2 mb-8">
+                        {[
+                            { id: 'matchmaking', label: 'Find a Fight', icon: 'hand-shake' },
+                            { id: 'events', label: 'Events', icon: 'calendar' }
+                        ].map(t => (
+                            <button key={t.id} onClick={() => setFightsTab(t.id)}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${fightsTab === t.id ? 'bg-black text-[#d7df22] shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                                <Icon name={t.id === 'matchmaking' ? 'swords' : 'calendar'} size={12} />{t.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="max-w-3xl space-y-3">
+                        {(visibleDisplay.length === 0 ? fights.slice(0, user ? fights.length : 5) : visibleDisplay).map(f => (
+                            <div key={f.id} className="bg-white border-2 border-gray-100 p-4 rounded-[1.5rem] flex items-center gap-4 hover:border-black transition-all group">
+                                {/* Date block */}
+                                <div className="bg-gray-50 flex flex-col items-center justify-center p-3 rounded-xl min-w-[70px] h-[70px] border border-gray-100 text-center shrink-0">
+                                    <p className="text-xl font-black italic tracking-tighter leading-none">{f.event_date?.split(' ')[1] || '?'}</p>
+                                    <p className="text-[8px] font-black text-gray-400 uppercase">{f.event_date?.split(' ')[0] || 'TBD'}</p>
+                                </div>
+                                {/* Info */}
+                                <div className="flex-1 min-w-0 text-left">
+                                    <span className="bg-[#d7df22] text-black px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest italic inline-block mb-1">
+                                        {f.is_callout ? 'Call Out' : 'Event'}
+                                    </span>
+                                    <h3 className="text-base font-black italic uppercase leading-tight tracking-tighter truncate">{f.event_name}</h3>
+                                    <div className="flex items-center gap-3 mt-1">
+                                        <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">{f.fight_type || 'Open'}</span>
+                                        <span className="flex items-center gap-1 text-[9px] font-bold text-gray-400"><Icon name="map-pin" size={9} className="text-red-500"/>{f.city}</span>
+                                    </div>
+                                </div>
+                                {/* Actions */}
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {!revealedFights.has(f.id) ? (
+                                        <>
+                                            <button onClick={() => toggle(f.id)} className="bg-black text-[#d7df22] px-5 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-[#d7df22] hover:text-black transition-all shadow-md">Contact</button>
+                                            <button onClick={() => onShare(f)} className={`p-2.5 rounded-xl transition-all border ${copiedShareId === f.id ? 'bg-green-500 text-white border-green-500' : 'bg-gray-50 border-gray-200 hover:border-black hover:bg-black hover:text-[#d7df22]'}`}>
+                                                <Icon name={copiedShareId === f.id ? 'check' : 'share-2'} size={14} />
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <div className="flex items-center gap-2 bg-black text-white px-3 py-2 rounded-xl animate-fade-in">
+                                            <span className="text-[9px] font-black italic truncate max-w-[90px]">{f.contact_info}</span>
+                                            <CopyButton text={f.contact_info} size={11} />
+                                            <button onClick={() => toggle(f.id)} className="text-white/40 hover:text-red-400"><Icon name="x" size={12} /></button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        {!user && fights.length > 5 && (
+                            <div className="mt-6">
+                                <RegisterCTA title="Unlock All Fights" text="See full matchmaking board & event calendar" onSignUp={onSignUp} />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================================
+        // DEALS VIEW  (gear + sponsors merged)
+        // ============================================================
+        const DealsView = ({ gear, sponsors, user, onSignUp, dealsTab, setDealsTab, revealedSponsors, setRevealedSponsors }) => {
+            const toggleSponsor = (id) => {
+                const s = new Set(revealedSponsors); s.has(id) ? s.delete(id) : s.add(id); setRevealedSponsors(s);
+            };
+
+            return (
+                <div>
+                    <div className="mb-6 flex items-end justify-between">
+                        <div>
+                            <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none">Deals</h2>
+                            <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">Gear discounts & sponsor connections</p>
+                        </div>
+                    </div>
+
+                    {/* Sub-tabs */}
+                    <div className="flex gap-2 mb-8">
+                        {[
+                            { id: 'gear', label: 'Gear Discounts', icon: 'shopping-bag' },
+                            { id: 'sponsors', label: 'Get Sponsored', icon: 'target' }
+                        ].map(t => (
+                            <button key={t.id} onClick={() => setDealsTab(t.id)}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${dealsTab === t.id ? 'bg-black text-[#d7df22] shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                                <Icon name={t.icon} size={12} />{t.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* GEAR */}
+                    {dealsTab === 'gear' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {(user ? gear : gear.slice(0, 5)).map((item, i) => {
+                                const els = [];
+                                if (i === 3) els.push(<AdCard key="ad" />);
+                                els.push(
+                                    <div key={i} className="bg-white border-2 border-gray-100 p-7 rounded-[2rem] shadow-lg flex flex-col hover:border-black transition-all">
+                                        <div className="flex justify-between items-start mb-5">
+                                            <span className="bg-[#d7df22] text-black px-3 py-1 rounded-full text-[9px] font-black uppercase">-{item.discount_amount}</span>
+                                        </div>
+                                        <h3 className="text-xl font-black italic uppercase leading-none mb-1">{item.brand_name || "Partner"}</h3>
+                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest italic mb-6">{item.product_name}</p>
+                                        <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-200 flex justify-between items-center mb-6 font-mono font-black text-lg">
+                                            <span className="text-black">{item.discount_code}</span>
+                                            <CopyButton text={item.discount_code} showText={true} />
+                                        </div>
+                                        <button onClick={() => window.open(item.affiliate_url)} className="w-full bg-black text-[#d7df22] py-3 rounded-xl font-black uppercase italic tracking-widest text-[9px] shadow-md hover:bg-[#d7df22] hover:text-black transition-colors mt-auto">Get Deal →</button>
+                                    </div>
+                                );
+                                return els;
+                            })}
+                            {!user && gear.length > 5 && <RegisterCTA title="Unlock All Discounts" text="20+ combat gear deals" onSignUp={onSignUp} />}
+                        </div>
+                    )}
+
+                    {/* SPONSORS */}
+                    {dealsTab === 'sponsors' && (
+                        <div>
+                            <a href="https://restround.co/blogs/combat-gear-skin-spray/the-sponsorship-blueprint-how-to-fund-your-fight-career-in-2026" target="_blank"
+                                className="block bg-[#d7df22] p-10 rounded-[2.5rem] text-black shadow-xl mb-8 relative overflow-hidden group hover:shadow-2xl transition-shadow">
+                                <div className="absolute right-[-5%] top-[-10%] opacity-10 rotate-12 pointer-events-none group-hover:scale-110 transition-transform">
+                                    <Icon name="target" size={200} />
+                                </div>
+                                <p className="text-[9px] font-black uppercase tracking-[0.4em] mb-3 opacity-60">Free Guide</p>
+                                <h3 className="text-3xl font-black italic uppercase mb-3 tracking-tighter leading-none">The Sponsorship Blueprint</h3>
+                                <p className="font-bold text-sm uppercase tracking-widest opacity-70 italic">How to Fund Your Fight Career in 2026 → Read Now</p>
+                            </a>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {(user ? sponsors : sponsors.slice(0, 5)).map((s, i) => {
+                                    const els = [];
+                                    if (i === 3) els.push(<AdCard key="ad" />);
+                                    els.push(
+                                        <div key={s.id} className="bg-white border-2 border-gray-100 p-7 rounded-[2rem] shadow-lg flex flex-col hover:border-black transition-all">
+                                            <h3 className="text-xl font-black italic uppercase mb-2 leading-none">{s.brand_name}</h3>
+                                            <span className="bg-black text-[#d7df22] text-[7px] font-black px-3 py-1 rounded-full uppercase tracking-widest italic inline-block mb-6 self-start">{s.focus || 'Partner'}</span>
+                                            <div className="space-y-3 mb-6 flex-1">
+                                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                                    <p className="text-[8px] font-black text-gray-400 uppercase mb-1.5 tracking-widest">Requirement</p>
+                                                    <p className="text-[11px] font-bold leading-relaxed">{s.requirement || "Active status required."}</p>
+                                                </div>
+                                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                                    <p className="text-[8px] font-black text-gray-400 uppercase mb-1.5 tracking-widest">What You Get</p>
+                                                    <p className="text-[11px] font-bold leading-relaxed">{s.offer || "Product kit + commission"}</p>
+                                                </div>
+                                            </div>
+                                            {!revealedSponsors.has(s.id) ? (
+                                                <button onClick={() => toggleSponsor(s.id)} className="w-full py-3 rounded-xl font-black uppercase italic tracking-widest text-[9px] bg-black text-[#d7df22] hover:bg-[#d7df22] hover:text-black transition-all shadow-md">Get Contact →</button>
+                                            ) : (
+                                                <div className="flex items-center gap-2 bg-black text-white p-3 rounded-xl animate-fade-in">
+                                                    <span className="text-[9px] font-black italic flex-1 truncate">{s.email || 'team.restround@gmail.com'}</span>
+                                                    <CopyButton text={s.email || 'team.restround@gmail.com'} size={11} showText />
+                                                    <button onClick={() => toggleSponsor(s.id)} className="text-white/30 hover:text-red-400"><Icon name="x" size={12}/></button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                    return els;
+                                })}
+                                {!user && sponsors.length > 5 && <RegisterCTA title="Unlock Sponsors" text="Connect with brands looking for fighters" onSignUp={onSignUp} />}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // ============================================================
+        // GYM MODAL
+        // ============================================================
+        const GymModal = ({ gym, profiles, onClose }) => (
+            <div className="fixed inset-0 z-[400] flex items-end md:items-center justify-center p-0 md:p-8">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={onClose} />
+                <div className="relative bg-white w-full max-w-4xl h-[92vh] md:h-auto md:max-h-[88vh] rounded-t-[3rem] md:rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row animate-modal">
+                    <button onClick={onClose} className="absolute top-5 right-5 bg-black text-[#d7df22] p-2 rounded-full z-10 hover:scale-110 transition-transform">
+                        <Icon name="x" size={18} />
+                    </button>
+                    <div className="md:w-2/5 relative h-56 md:h-auto shrink-0 bg-gray-100 overflow-hidden">
+                        <img src={gym.image_url || "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=600"} className="w-full h-full object-cover" alt={gym.name} />
+                    </div>
+                    <div className="md:w-3/5 p-8 md:p-10 overflow-y-auto no-scrollbar space-y-8 text-left">
+                        <div>
+                            <div className="flex items-center gap-1.5 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-2 italic">
+                                <Icon name="map-pin" size={12} className="text-red-500"/>{gym.city_country || gym.city || gym.location}
+                            </div>
+                            <h2 className="text-2xl font-black italic uppercase tracking-tighter leading-none">{gym.name}</h2>
+                        </div>
+
+                        {/* Who's here */}
+                        <div className="bg-gray-50 p-6 rounded-2xl grid grid-cols-3 gap-1 text-center border border-gray-100">
+                            <div className="space-y-2">
+                                <p className="text-[8px] font-black text-gray-400 uppercase italic">Here Now</p>
+                                <AvatarStack gymId={gym.id} profiles={profiles} />
+                            </div>
+                            <div className="space-y-2 border-x border-gray-200">
+                                <p className="text-[8px] font-black text-gray-400 uppercase italic">Visit Soon</p>
+                                <span className="text-xl font-black">—</span>
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-[8px] font-black text-gray-400 uppercase italic">Was Here</p>
+                                <span className="text-xl font-black">—</span>
+                            </div>
+                        </div>
+
+                        {/* Metrics */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <MetricBar label="Hygiene" value={gym.hygiene_score} icon="shield-check" />
+                            <MetricBar label="Food Safety" value={gym.food_safety} icon="utensils" />
+                            <MetricBar label="English" value={gym.english_score} icon="languages" />
+                            <MetricBar label="Safe for Women" value={gym.safe_for_women} icon="shield" />
+                        </div>
+
+                        <a href={gym.website} target="_blank"
+                            className="block w-full bg-black text-[#d7df22] py-4 rounded-xl font-black uppercase italic tracking-[0.2em] text-[10px] text-center hover:bg-[#d7df22] hover:text-black transition-colors shadow-lg">
+                            Visit Gym Website →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        );
+
+        // ============================================================
+        // FIGHTER MODAL
+        // ============================================================
+        const FighterModal = ({ fighter, gyms, onClose }) => {
+            const homeGym = gyms.find(g => g.name === fighter.home_gym);
+            const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) || '?';
+
+            return (
+                <div className="fixed inset-0 z-[400] flex items-end md:items-center justify-center p-0 md:p-8">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={onClose} />
+                    <div className="relative bg-white w-full max-w-lg rounded-t-[3rem] md:rounded-[2.5rem] overflow-hidden shadow-2xl animate-modal">
+                        <button onClick={onClose} className="absolute top-5 right-5 bg-black text-[#d7df22] p-2 rounded-full z-10 hover:scale-110 transition-transform">
+                            <Icon name="x" size={18} />
+                        </button>
+                        {/* Header */}
+                        <div className="bg-black p-10 text-center">
+                            {fighter.avatar_url ? (
+                                <img src={fighter.avatar_url} className="w-28 h-28 rounded-full border-4 border-[#d7df22] mx-auto mb-5 object-cover" alt={fighter.full_name} />
+                            ) : (
+                                <div className="w-28 h-28 rounded-full border-4 border-[#d7df22] mx-auto mb-5 bg-gray-900 flex items-center justify-center">
+                                    <span className="text-[#d7df22] text-3xl font-black italic">{getInitials(fighter.full_name)}</span>
+                                </div>
+                            )}
+                            <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter leading-none">{fighter.full_name}</h2>
+                            {fighter.username && (
+                                <a href={`https://instagram.com/${fighter.username}`} target="_blank"
+                                    className="inline-flex items-center gap-2 mt-3 text-[#d7df22] text-[9px] font-black uppercase tracking-[0.3em] bg-white/10 px-4 py-2 rounded-full hover:bg-[#d7df22] hover:text-black transition-all">
+                                    <InstagramIcon size={12} /> @{fighter.username}
+                                </a>
+                            )}
+                        </div>
+                        {/* Body */}
+                        <div className="p-8 space-y-6 text-left overflow-y-auto no-scrollbar max-h-[50vh]">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-gray-50 p-4 rounded-xl">
+                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Location</p>
+                                    <p className="font-black italic uppercase text-sm">{fighter.city || '—'}</p>
+                                </div>
+                                <div className="bg-gray-50 p-4 rounded-xl">
+                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Weight Class</p>
+                                    <p className="font-black italic uppercase text-sm">{fighter.weight_class || '—'}</p>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 p-4 rounded-xl">
+                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-2">Disciplines</p>
+                                <div className="flex flex-wrap gap-1">
+                                    {(fighter.disciplines || '').split(',').map(d => d.trim()).filter(Boolean).map(d => (
+                                        <span key={d} className="bg-black text-[#d7df22] text-[7px] font-black px-3 py-1 rounded-full uppercase tracking-widest">{d}</span>
+                                    ))}
+                                </div>
+                            </div>
+                            {fighter.open_to && (
+                                <div className="bg-[#d7df22]/10 border border-[#d7df22]/30 p-4 rounded-xl">
+                                    <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2">Open To</p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {fighter.open_to.split(',').map(o => o.trim()).filter(Boolean).map(o => (
+                                            <span key={o} className="bg-[#d7df22] text-black text-[7px] font-black px-3 py-1 rounded-full uppercase tracking-widest">{o}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {fighter.home_gym && (
+                                <div className="bg-gray-50 p-4 rounded-xl">
+                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Home Gym</p>
+                                    <p className="font-black italic uppercase text-sm">{fighter.home_gym}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================================
+        // PROFILE PANEL
+        // ============================================================
+        const ProfilePanel = ({ myProfile, user, gyms, isEditing, editFields, setEditFields, onEdit, onSave, onCancel, onSignOut }) => {
+            const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) || '?';
+            const field = (key, label, placeholder, type = "text") => (
+                <div>
+                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">{label}</p>
+                    <input type={type} value={editFields[key] || ''} onChange={e => setEditFields({...editFields, [key]: e.target.value})}
+                        placeholder={placeholder} className="w-full bg-gray-50 border-2 border-transparent focus:border-black p-3.5 rounded-xl font-bold outline-none transition-all text-sm" />
+                </div>
+            );
+
+            return (
+                <div className="max-w-xl mx-auto animate-slide-up">
+                    <div className="bg-white rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100">
+                        {/* Header */}
+                        <div className="bg-black p-10 text-center relative">
+                            <button onClick={onSignOut} className="absolute top-5 right-5 text-gray-500 hover:text-[#d7df22] transition-colors">
+                                <Icon name="log-out" size={18} />
+                            </button>
+                            {myProfile.avatar_url ? (
+                                <img src={myProfile.avatar_url} className="w-24 h-24 rounded-full border-4 border-[#d7df22] mx-auto mb-5 object-cover" alt={myProfile.full_name} />
+                            ) : (
+                                <div className="w-24 h-24 rounded-full border-4 border-[#d7df22] mx-auto mb-5 bg-gray-900 flex items-center justify-center">
+                                    <span className="text-[#d7df22] text-2xl font-black italic">{getInitials(myProfile.full_name)}</span>
+                                </div>
+                            )}
+                            <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter">{myProfile.full_name || 'Athlete'}</h2>
+                            {myProfile.username && (
+                                <a href={`https://instagram.com/${myProfile.username}`} target="_blank"
+                                    className="inline-flex items-center gap-2 mt-2 text-[#d7df22] text-[9px] font-black uppercase tracking-widest bg-white/10 px-4 py-1.5 rounded-full hover:bg-[#d7df22] hover:text-black transition-all">
+                                    <InstagramIcon size={11} /> @{myProfile.username}
+                                </a>
+                            )}
+                        </div>
+                        {/* Body */}
+                        <div className="p-8 space-y-5">
+                            {isEditing ? (
+                                <>
+                                    {field('full_name', 'Full Name', 'Your name')}
+                                    {field('username', 'Instagram Handle', '@yourhandle')}
+                                    {field('city', 'City / Location', 'Phuket, Thailand')}
+                                    {field('weight_class', 'Weight Class', 'Featherweight')}
+                                    {field('disciplines', 'Disciplines', 'MMA, Muay Thai, BJJ (comma separated)')}
+                                    {field('open_to', 'Open To', 'Sparring, Fights, Sponsors')}
+                                    {field('home_gym', 'Home Gym', 'Bangtao MMA')}
+                                    {field('current_gym', 'Here Now (gym)', 'Tiger Muay Thai')}
+                                    {field('planned_gyms', 'Visiting Soon', 'AKA Thailand')}
+                                    <div className="flex gap-3 pt-2">
+                                        <button onClick={onSave} className="flex-1 bg-black text-[#d7df22] py-4 rounded-xl font-black uppercase italic tracking-widest text-[9px] hover:bg-[#d7df22] hover:text-black transition-colors shadow-md">Save Profile</button>
+                                        <button onClick={onCancel} className="px-6 bg-gray-100 text-gray-500 rounded-xl font-black uppercase text-[9px]">Cancel</button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-gray-50 p-4 rounded-xl">
+                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Location</p>
+                                            <p className="font-black italic uppercase text-sm">{myProfile.city || '—'}</p>
+                                        </div>
+                                        <div className="bg-gray-50 p-4 rounded-xl">
+                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Weight Class</p>
+                                            <p className="font-black italic uppercase text-sm">{myProfile.weight_class || '—'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-xl">
+                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-2">Disciplines</p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {(myProfile.disciplines || '').split(',').filter(Boolean).map(d => (
+                                                <span key={d} className="bg-black text-[#d7df22] text-[7px] font-black px-3 py-1 rounded-full uppercase tracking-widest">{d.trim()}</span>
+                                            ))}
+                                            {!myProfile.disciplines && <span className="text-gray-400 text-xs">Not set</span>}
+                                        </div>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-xl">
+                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Home Gym</p>
+                                        <p className="font-black italic uppercase text-sm">{myProfile.home_gym || '—'}</p>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-xl">
+                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Here Now</p>
+                                        <p className="font-black italic uppercase text-sm">{myProfile.current_gym || '—'}</p>
+                                    </div>
+                                    {myProfile.open_to && (
+                                        <div className="bg-[#d7df22]/10 border border-[#d7df22]/30 p-4 rounded-xl">
+                                            <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2">Open To</p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {myProfile.open_to.split(',').map(o => o.trim()).filter(Boolean).map(o => (
+                                                    <span key={o} className="bg-[#d7df22] text-black text-[7px] font-black px-3 py-1 rounded-full uppercase">{o}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <button onClick={onEdit} className="w-full bg-black text-white py-4 rounded-xl font-black uppercase italic text-[9px] tracking-widest flex items-center justify-center gap-2 hover:text-[#d7df22] transition-colors shadow-md">
+                                        <Icon name="settings" size={15} /> Edit My Profile
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================================
+        // AUTH MODAL
+        // ============================================================
+        const AuthModal = ({ isLogin, setIsLogin, email, setEmail, password, setPassword, confirmPassword, setConfirmPassword, fullName, setFullName, authError, setAuthError, onSubmit, onClose }) => (
+            <div className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center p-0 sm:p-8">
+                <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={onClose} />
+                <div className="relative bg-white w-full max-w-md rounded-t-[3rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden animate-modal">
+                    <button onClick={onClose} className="absolute top-5 right-5 bg-gray-100 text-gray-500 p-2 rounded-full hover:bg-black hover:text-[#d7df22] transition-all">
+                        <Icon name="x" size={16} />
+                    </button>
+                    <div className="p-10">
+                        <h2 className="text-3xl font-black italic uppercase mb-1 tracking-tighter text-black">{isLogin ? 'Login' : 'Join Fighter List'}</h2>
+                        <p className="text-[9px] font-black uppercase text-gray-400 tracking-[0.3em] mb-8">{isLogin ? 'Access your fighter profile' : 'Create your fighter profile free'}</p>
+                        <form onSubmit={onSubmit} className="space-y-4">
+                            {!isLogin && (
+                                <div>
+                                    <p className="text-[8px] font-black text-gray-400 uppercase mb-1.5 ml-1 tracking-widest">Full Name</p>
+                                    <input type="text" placeholder="Alex Volkanovski" value={fullName} onChange={e => setFullName(e.target.value)} className="w-full bg-gray-50 p-4 rounded-xl font-bold outline-none border-2 border-transparent focus:border-black transition-all" required />
+                                </div>
+                            )}
+                            <div>
+                                <p className="text-[8px] font-black text-gray-400 uppercase mb-1.5 ml-1 tracking-widest">Email</p>
+                                <input type="email" placeholder="athlete@fighterlist.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-gray-50 p-4 rounded-xl font-bold outline-none border-2 border-transparent focus:border-black transition-all" required />
+                            </div>
+                            <div>
+                                <p className="text-[8px] font-black text-gray-400 uppercase mb-1.5 ml-1 tracking-widest">Password</p>
+                                <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-xl font-bold outline-none border-2 border-transparent focus:border-black transition-all" required />
+                            </div>
+                            {!isLogin && (
+                                <div>
+                                    <p className="text-[8px] font-black text-gray-400 uppercase mb-1.5 ml-1 tracking-widest">Confirm Password</p>
+                                    <input type="password" placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-xl font-bold outline-none border-2 border-transparent focus:border-black transition-all" required />
+                                </div>
+                            )}
+                            {authError && <p className="text-[10px] font-black uppercase text-red-500 tracking-tight">{authError}</p>}
+                            <button type="submit" className="w-full bg-black text-[#d7df22] py-5 rounded-xl font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all hover:bg-[#d7df22] hover:text-black">
+                                {isLogin ? 'Enter →' : 'Create Profile →'}
+                            </button>
+                            <p className="text-center text-[9px] font-black uppercase text-gray-400 cursor-pointer pt-1 hover:text-black transition-colors" onClick={() => { setIsLogin(!isLogin); setAuthError(""); }}>
+                                {isLogin ? "No account? Sign up free →" : "Already a member? Login →"}
+                            </p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        );
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
