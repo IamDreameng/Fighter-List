@@ -3,1141 +3,834 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-eval'
     <title>Fighter List | Powered by REST ROUND™</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22black%22/><text x=%2250%%22 y=%2245%%22 text-anchor=%22middle%22 fill=%22%23d7df22%22 font-family=%22Arial Black, sans-serif%22 font-size=%2218%22 font-weight=%22900%22 style=%22letter-spacing:-1px%22>FIGHTER</text><text x=%2250%%22 y=%2282%%22 text-anchor=%22middle%22 fill=%22%23d7df22%22 font-family=%22Arial Black, sans-serif%22 font-size=%2236%22 font-weight=%22900%22 style=%22letter-spacing:-1px%22>LIST</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        body { font-family: 'Montserrat', sans-serif; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Montserrat', sans-serif; -webkit-tap-highlight-color: transparent; margin: 0; background: white; color: black; overflow-x: hidden; }
+        ::selection { background: #d7df22; color: black; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .selection-brand::selection { background: #d7df22; color: black; }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes slideIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
         .animate-slide-up { animation: slideUp 0.35s ease-out; }
         .animate-modal { animation: slideIn 0.3s ease-out; }
         .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4,0,0.6,1) infinite; }
         select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
-        .tab-active { background: black; color: #d7df22; }
-        .tab-inactive { color: #9ca3af; }
-        .tab-inactive:hover { color: black; }
+        input, select, button { font-family: 'Montserrat', sans-serif; }
+        .metric-bar-fill { height: 100%; background: black; transition: width 0.7s; border-radius: 9999px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(1,1fr); gap: 1.5rem; }
+        @media(min-width:640px){ .grid-4 { grid-template-columns: repeat(2,1fr); } }
+        @media(min-width:1024px){ .grid-4 { grid-template-columns: repeat(4,1fr); } }
+        .grid-2 { display: grid; grid-template-columns: repeat(1,1fr); gap: 1rem; }
+        @media(min-width:640px){ .grid-2 { grid-template-columns: repeat(2,1fr); } }
+        .pill { display:inline-block; padding: 2px 10px; border-radius:9999px; font-size:7px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; }
+        .pill-yellow { background:#d7df22; color:black; }
+        .pill-dark { background:black; color:#d7df22; }
+        .pill-gray { background:#f3f4f6; color:#4b5563; }
+        .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; font-family:'Montserrat',sans-serif; font-weight:900; text-transform:uppercase; letter-spacing:.15em; font-style:italic; cursor:pointer; border:none; transition:all .2s; }
+        .btn-dark { background:black; color:#d7df22; }
+        .btn-dark:hover { background:#d7df22; color:black; }
+        .btn-yellow { background:#d7df22; color:black; }
+        .card { background:white; border:1px solid #f3f4f6; border-radius:2rem; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,.08); transition:all .2s; cursor:pointer; display:flex; flex-direction:column; }
+        .card:hover { box-shadow:0 20px 40px rgba(0,0,0,.12); transform:translateY(-4px); }
+        .overlay { position:fixed; inset:0; z-index:400; display:flex; align-items:flex-end; justify-content:center; }
+        @media(min-width:768px){ .overlay { align-items:center; padding:2rem; } }
+        .overlay-bg { position:absolute; inset:0; background:rgba(0,0,0,.8); backdrop-filter:blur(4px); }
+        .modal { position:relative; background:white; width:100%; border-radius:3rem 3rem 0 0; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,.3); }
+        @media(min-width:768px){ .modal { border-radius:2.5rem; max-width:56rem; } }
+        .tab-btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border-radius:9999px; font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:.15em; cursor:pointer; border:none; transition:all .2s; }
+        .tab-active { background:black; color:#d7df22; box-shadow:0 4px 12px rgba(0,0,0,.2); }
+        .tab-inactive { background:#f3f4f6; color:#6b7280; }
+        .tab-inactive:hover { background:#e5e7eb; }
+        .input-field { width:100%; background:#f9fafb; border:2px solid transparent; border-radius:.75rem; padding:14px 16px; font-family:'Montserrat',sans-serif; font-weight:700; font-size:14px; outline:none; transition:all .2s; }
+        .input-field:focus { border-color:black; background:white; }
+        .hidden { display:none !important; }
+        #loading-screen { position:fixed; inset:0; background:white; display:flex; align-items:center; justify-content:center; z-index:9999; }
     </style>
 </head>
-<body class="bg-white text-black selection-brand overflow-x-hidden">
-    <div id="root"></div>
+<body>
 
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+<!-- Loading -->
+<div id="loading-screen">
+    <p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;color:#d1d5db;font-style:italic;" class="animate-pulse">Loading Intelligence…</p>
+</div>
 
-        // --- SUPABASE CONFIG ---
-        const SUPABASE_URL = "https://eahymntxxgflqkogdfxs.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhaHltbnR4eGdmbHFrb2dkZnhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NTYzODEsImV4cCI6MjA5MTEzMjM4MX0.Tg4VEgCcWHtcZYyrXcMILd3jsf8jFDM9twPL-yX8R_s";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+<!-- NAV -->
+<nav id="nav" style="position:sticky;top:0;z-index:100;background:white;border-bottom:1px solid #f3f4f6;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 1rem;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+    <button onclick="changeView('gyms')" style="display:flex;align-items:center;gap:12px;background:none;border:none;cursor:pointer;padding:0;">
+        <div style="width:40px;height:40px;background:black;border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            <svg viewBox="0 0 100 100" style="width:36px;height:36px;padding:4px;">
+                <text x="50%" y="45%" text-anchor="middle" fill="#d7df22" font-family="Arial Black, sans-serif" font-size="18" font-weight="900" style="letter-spacing:-1.5px">FIGHTER</text>
+                <text x="50%" y="82%" text-anchor="middle" fill="#d7df22" font-family="Arial Black, sans-serif" font-size="36" font-weight="900" style="letter-spacing:-1.5px">LIST</text>
+            </svg>
+        </div>
+        <span style="font-size:20px;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.05em;display:none;" id="logo-text">FIGHTER LIST</span>
+    </button>
 
-        // --- ICONS ---
-        const InstagramIcon = ({ size = 16 }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-        );
-        const WhatsAppIcon = ({ size = 16 }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-        );
-        const XIcon = ({ size = 14 }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
-        );
+    <div style="display:flex;gap:2px;background:#f9fafb;padding:4px;border-radius:9999px;border:1px solid #f3f4f6;">
+        <button class="tab-btn tab-active" id="tab-gyms" onclick="changeView('gyms')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span class="tab-label">Gyms</span>
+        </button>
+        <button class="tab-btn tab-inactive" id="tab-fighters" onclick="changeView('fighters')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span class="tab-label">Fighters</span>
+        </button>
+        <button class="tab-btn tab-inactive" id="tab-fights" onclick="changeView('fights')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M2 2l20 20"/></svg>
+            <span class="tab-label">Fights</span>
+        </button>
+        <button class="tab-btn tab-inactive" id="tab-deals" onclick="changeView('deals')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            <span class="tab-label">Deals</span>
+        </button>
+    </div>
 
-        const Icon = ({ name, size = 16, className = "" }) => {
-            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [name]);
-            return <i data-lucide={name} style={{ width: size, height: size, display: 'inline-block' }} className={className}></i>;
-        };
+    <button id="user-btn" onclick="handleUserBtn()" style="width:40px;height:40px;background:black;color:#d7df22;border:none;border-radius:9999px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.2);transition:all .2s;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </button>
+</nav>
 
-        const CopyButton = ({ text, size = 12, showText = false }) => {
-            const [copied, setCopied] = useState(false);
-            const handleCopy = (e) => {
-                e.stopPropagation();
-                navigator.clipboard?.writeText(text).catch(() => {
-                    const ta = document.createElement("textarea");
-                    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-                });
-                setCopied(true); setTimeout(() => setCopied(false), 2000);
-            };
-            return (
-                <button onClick={handleCopy} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all active:scale-95 ${copied ? 'bg-green-50' : 'hover:bg-gray-100'}`}>
-                    {showText && <span className={`text-[8px] font-black uppercase ${copied ? 'text-green-600' : 'text-gray-400'}`}>{copied ? 'Copied!' : 'Copy'}</span>}
-                    <Icon name={copied ? "check" : "copy"} size={size} className={copied ? "text-green-500" : "text-gray-400"} />
-                </button>
-            );
-        };
+<!-- FILTERS -->
+<div id="filters" style="width:100%;padding:20px 1rem 12px;display:flex;flex-direction:column;gap:12px;max-width:1400px;margin:0 auto;" class="animate-fade-in">
+    <div style="display:flex;gap:8px;">
+        <div style="position:relative;flex:1;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);pointer-events:none;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <select id="city-filter" onchange="applyFilters()" style="width:100%;background:#f9fafb;border:2px solid transparent;padding:14px 24px 14px 36px;border-radius:9999px;font-family:'Montserrat',sans-serif;font-weight:900;font-size:9px;text-transform:uppercase;letter-spacing:.1em;outline:none;cursor:pointer;">
+                <option value="All">All Cities</option>
+            </select>
+        </div>
+        <div style="position:relative;flex:1;">
+            <select id="type-filter" onchange="applyFilters()" style="width:100%;background:#f9fafb;border:2px solid transparent;padding:14px 16px;border-radius:9999px;font-family:'Montserrat',sans-serif;font-weight:900;font-size:9px;text-transform:uppercase;letter-spacing:.1em;outline:none;cursor:pointer;">
+                <option value="All">All Styles</option>
+                <option>MMA</option><option>Muay Thai</option><option>BJJ</option><option>Boxing</option><option>Wrestling</option>
+            </select>
+        </div>
+    </div>
+    <div style="position:relative;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2" style="position:absolute;left:20px;top:50%;transform:translateY(-50%);pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="search-input" type="text" placeholder="Search..." oninput="applyFilters()" style="width:100%;background:#f9fafb;border:2px solid transparent;padding:14px 14px 14px 48px;border-radius:9999px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:14px;outline:none;transition:all .2s;" onfocus="this.style.borderColor='black';this.style.background='white';" onblur="this.style.borderColor='transparent';this.style.background='#f9fafb';">
+    </div>
+</div>
 
-        const MetricBar = ({ label, value, icon }) => (
-            <div className="space-y-1.5">
-                <div className="flex justify-between items-center font-black uppercase tracking-widest text-gray-500 text-[9px]">
-                    <div className="flex items-center gap-1.5"><Icon name={icon} size={11} />{label}</div>
-                    <span className="text-black font-black">{value || 0}%</span>
-                </div>
-                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-black transition-all duration-700" style={{ width: `${value || 0}%` }} />
-                </div>
+<!-- MAIN -->
+<main id="main" style="width:100%;padding:0 1rem 2rem;max-width:1400px;margin:0 auto;min-height:60vh;"></main>
+
+<!-- FOOTER BANNER -->
+<div style="padding:0 1rem 2.5rem;">
+    <a href="https://restround.co" target="_blank" style="display:block;background:black;border-radius:3rem;padding:2.5rem;position:relative;overflow:hidden;text-decoration:none;border:2px solid rgba(215,223,34,.1);transition:border-color .2s;" onmouseover="this.style.borderColor='rgba(215,223,34,.4)'" onmouseout="this.style.borderColor='rgba(215,223,34,.1)'">
+        <div style="position:absolute;right:0;top:0;height:100%;width:33%;background:linear-gradient(to left,rgba(215,223,34,.1),transparent);pointer-events:none;"></div>
+        <div style="display:flex;flex-direction:column;gap:2rem;position:relative;z-index:1;">
+            <div>
+                <p style="color:#d7df22;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;font-style:italic;margin:0 0 8px;">Powered by</p>
+                <h2 style="font-size:2.5rem;font-weight:900;font-style:italic;text-transform:uppercase;color:white;letter-spacing:-.05em;margin:0 0 8px;line-height:1;">REST ROUND™</h2>
+                <p style="color:#9ca3af;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;font-style:italic;margin:0;">HOCL Combat Skin & Gear Hygiene</p>
             </div>
-        );
+            <div style="background:#d7df22;color:black;padding:14px 32px;border-radius:1rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:.1em;font-size:13px;display:inline-block;transition:transform .2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">Shop Rest Round™ →</div>
+        </div>
+    </a>
+</div>
 
-        // Discipline pill
-        const Pill = ({ label, accent = false }) => (
-            <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${accent ? 'bg-[#d7df22] text-black' : 'bg-gray-100 text-gray-500'}`}>{label}</span>
-        );
-
-        // Inline RestRound ad card — shown once per grid at position 4
-        const AdCard = () => (
-            <a href="https://restround.co" target="_blank" className="bg-black rounded-[2.5rem] p-8 flex flex-col justify-between text-left border border-[#d7df22]/20 shadow-2xl relative overflow-hidden group h-full">
-                <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-[#d7df22] opacity-10 rounded-full blur-3xl group-hover:opacity-20 transition-opacity pointer-events-none"></div>
-                <div>
-                    <span className="bg-[#d7df22] text-black text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest mb-4 inline-block italic">Partner</span>
-                    <h4 className="text-2xl font-black italic uppercase text-white leading-none mb-2 tracking-tighter">REST ROUND™</h4>
-                    <p className="text-[#d7df22] text-[9px] font-black uppercase tracking-[0.2em] mb-4 italic">HOCL Combat Hygiene</p>
-                    <p className="text-gray-400 text-[11px] leading-relaxed">Stop staph and ringworm before they stop your camp. Engineered for combat athletes.</p>
-                </div>
-                <div className="w-full bg-[#d7df22] text-black py-3 rounded-xl font-black uppercase text-[9px] tracking-[0.2em] text-center mt-6 group-hover:bg-white transition-colors">Shop Rest Round™</div>
+<!-- FOOTER -->
+<footer style="border-top:1px solid #f3f4f6;padding:2.5rem 1rem;">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:24px 32px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;font-style:italic;color:#9ca3af;">
+        <div style="display:flex;align-items:center;gap:16px;">
+            <a href="https://instagram.com/fighterlist_com" target="_blank" style="color:inherit;transition:color .2s;" onmouseover="this.style.color='black'" onmouseout="this.style.color='#9ca3af'">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
             </a>
-        );
+            <a href="https://wa.me/66924692066" target="_blank" style="color:inherit;transition:color .2s;" onmouseover="this.style.color='black'" onmouseout="this.style.color='#9ca3af'">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            </a>
+        </div>
+        <a href="mailto:team.restround@gmail.com" style="color:inherit;transition:color .2s;" onmouseover="this.style.color='black'" onmouseout="this.style.color='#9ca3af'">team.restround@gmail.com</a>
+        <span>Fighter List © 2026 · Powered by Rest Round™</span>
+    </div>
+</footer>
 
-        // Lock gate for non-users
-        const RegisterCTA = ({ title, text, onSignUp }) => (
-            <div onClick={onSignUp} className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-[2.5rem] flex flex-col items-center justify-center text-center cursor-pointer hover:border-black transition-all group">
-                <Icon name="lock" size={28} className="text-black mb-4 group-hover:scale-110 transition-transform"/>
-                <h4 className="text-lg font-black italic uppercase text-black leading-none mb-2 tracking-tighter">{title}</h4>
-                <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-6">{text}</p>
-                <button className="bg-black text-[#d7df22] px-8 py-3 rounded-full text-[9px] font-black uppercase italic">Sign Up Free</button>
+<!-- GYM MODAL -->
+<div id="gym-modal" class="overlay hidden">
+    <div class="overlay-bg" onclick="closeModal('gym-modal')"></div>
+    <div class="modal animate-modal" style="max-width:56rem;" id="gym-modal-inner">
+        <button onclick="closeModal('gym-modal')" style="position:absolute;top:20px;right:20px;background:black;color:#d7df22;border:none;border-radius:9999px;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div style="display:flex;flex-direction:column;max-height:92vh;" id="gym-modal-content"></div>
+    </div>
+</div>
+
+<!-- FIGHTER MODAL -->
+<div id="fighter-modal" class="overlay hidden">
+    <div class="overlay-bg" onclick="closeModal('fighter-modal')"></div>
+    <div class="modal animate-modal" style="max-width:32rem;" id="fighter-modal-inner">
+        <button onclick="closeModal('fighter-modal')" style="position:absolute;top:20px;right:20px;background:black;color:#d7df22;border:none;border-radius:9999px;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div id="fighter-modal-content"></div>
+    </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div id="auth-modal" class="overlay hidden">
+    <div class="overlay-bg" onclick="closeModal('auth-modal')"></div>
+    <div class="modal animate-modal" style="max-width:28rem;">
+        <button onclick="closeModal('auth-modal')" style="position:absolute;top:20px;right:20px;background:#f3f4f6;color:#6b7280;border:none;border-radius:9999px;width:36px;height:36px;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div style="padding:2.5rem;" id="auth-form-container"></div>
+    </div>
+</div>
+
+<script>
+// ─── SUPABASE ────────────────────────────────────────────────
+const SUPABASE_URL = "https://eahymntxxgflqkogdfxs.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhaHltbnR4eGdmbHFrb2dkZnhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NTYzODEsImV4cCI6MjA5MTEzMjM4MX0.Tg4VEgCcWHtcZYyrXcMILd3jsf8jFDM9twPL-yX8R_s";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ─── STATE ────────────────────────────────────────────────────
+let currentView = 'gyms';
+let currentUser = null;
+let gyms = [], fights = [], gear = [], sponsors = [], profiles = [];
+let revealedFights = new Set();
+let revealedSponsors = new Set();
+let fightsSubTab = 'matchmaking';
+let dealsSubTab = 'gear';
+
+// ─── HELPERS ─────────────────────────────────────────────────
+const el = id => document.getElementById(id);
+const h = (tag, attrs={}, ...children) => {
+    const e = document.createElement(tag);
+    Object.entries(attrs).forEach(([k,v]) => {
+        if(k==='style' && typeof v==='object') Object.assign(e.style, v);
+        else if(k.startsWith('on')) e.addEventListener(k.slice(2).toLowerCase(), v);
+        else e.setAttribute(k,v);
+    });
+    children.forEach(c => {
+        if(c==null) return;
+        e.appendChild(typeof c==='string' ? document.createTextNode(c) : c);
+    });
+    return e;
+};
+
+function metricBar(label, value) {
+    const d = document.createElement('div');
+    d.style.cssText = 'margin-bottom:12px;';
+    d.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#6b7280;margin-bottom:6px;">
+            <span>${label}</span><span style="color:black;">${value||0}%</span>
+        </div>
+        <div style="height:6px;background:#f3f4f6;border-radius:9999px;overflow:hidden;">
+            <div class="metric-bar-fill" style="width:${value||0}%;"></div>
+        </div>`;
+    return d;
+}
+
+function adCard() {
+    const a = document.createElement('a');
+    a.href = 'https://restround.co';
+    a.target = '_blank';
+    a.style.cssText = 'background:black;border-radius:2.5rem;padding:2rem;display:flex;flex-direction:column;justify-content:space-between;text-decoration:none;border:1px solid rgba(215,223,34,.2);box-shadow:0 20px 40px rgba(0,0,0,.2);position:relative;overflow:hidden;min-height:280px;';
+    a.innerHTML = `
+        <div style="position:absolute;top:-20%;right:-10%;width:256px;height:256px;background:#d7df22;opacity:.1;border-radius:9999px;filter:blur(48px);pointer-events:none;"></div>
+        <div>
+            <span style="background:#d7df22;color:black;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;padding:2px 8px;border-radius:4px;font-style:italic;display:inline-block;margin-bottom:16px;">Partner</span>
+            <h4 style="font-size:1.5rem;font-weight:900;font-style:italic;text-transform:uppercase;color:white;letter-spacing:-.05em;margin:0 0 6px;line-height:1;">REST ROUND™</h4>
+            <p style="color:#d7df22;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;font-style:italic;margin:0 0 12px;">HOCL Combat Hygiene</p>
+            <p style="color:#9ca3af;font-size:11px;line-height:1.6;margin:0;">Stop staph and ringworm before they stop your camp.</p>
+        </div>
+        <div style="background:#d7df22;color:black;padding:12px;border-radius:.75rem;font-weight:900;text-transform:uppercase;font-size:9px;letter-spacing:.2em;text-align:center;margin-top:24px;">Shop Rest Round™</div>`;
+    return a;
+}
+
+function registerCTA(title, text) {
+    const d = document.createElement('div');
+    d.style.cssText = 'background:#f9fafb;border:2px dashed #e5e7eb;padding:2rem;border-radius:2.5rem;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:border-color .2s;';
+    d.onmouseenter = () => d.style.borderColor='black';
+    d.onmouseleave = () => d.style.borderColor='#e5e7eb';
+    d.onclick = () => openAuthModal();
+    d.innerHTML = `
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" style="margin-bottom:12px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <h4 style="font-size:1.1rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.03em;margin:0 0 8px;">${title}</h4>
+        <p style="font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;letter-spacing:.15em;margin:0 0 20px;">${text}</p>
+        <button class="btn btn-dark" style="padding:10px 28px;border-radius:9999px;font-size:9px;">Sign Up Free</button>`;
+    return d;
+}
+
+function getInitials(name) {
+    return (name||'?').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) || '?';
+}
+
+function closeModal(id) { el(id).classList.add('hidden'); }
+function openModal(id) { el(id).classList.remove('hidden'); }
+
+// ─── DATA ─────────────────────────────────────────────────────
+async function loadData() {
+    const [gymRes, fightRes, gearRes, sponsorRes, profileRes] = await Promise.all([
+        sb.from('gyms').select('*'),
+        sb.from('fights').select('*').order('event_date', {ascending:true}),
+        sb.from('gear_discounts').select('*'),
+        sb.from('sponsors').select('*'),
+        sb.from('profiles').select('*')
+    ]);
+    if(gymRes.data) gyms = gymRes.data.sort((a,b) => {
+        const aF = a.name?.toLowerCase().includes('bangtao');
+        const bF = b.name?.toLowerCase().includes('bangtao');
+        if(aF && !bF) return -1; if(!aF && bF) return 1;
+        return (b.upvotes||0)-(a.upvotes||0);
+    });
+    if(fightRes.data) fights = fightRes.data;
+    if(gearRes.data) gear = gearRes.data.sort((a,b) => {
+        const aR = a.brand_name?.toLowerCase().includes('rest round');
+        const bR = b.brand_name?.toLowerCase().includes('rest round');
+        if(aR && !bR) return -1; if(!aR && bR) return 1; return 0;
+    });
+    if(sponsorRes.data) sponsors = sponsorRes.data;
+    if(profileRes.data) profiles = profileRes.data;
+    updateCityFilter();
+    el('loading-screen').style.display = 'none';
+    renderView();
+}
+
+function updateCityFilter() {
+    const sel = el('city-filter');
+    const locs = [...new Set([
+        ...gyms.map(g=>g.city_country||g.city).filter(Boolean),
+        ...profiles.map(p=>p.city).filter(Boolean)
+    ])].sort();
+    sel.innerHTML = '<option value="All">All Cities</option>' + locs.map(c=>`<option>${c}</option>`).join('');
+}
+
+// ─── NAV ──────────────────────────────────────────────────────
+function changeView(v) {
+    currentView = v;
+    el('search-input').value = '';
+    el('city-filter').value = 'All';
+    el('type-filter').value = 'All';
+    ['gyms','fighters','fights','deals'].forEach(t => {
+        const btn = el('tab-'+t);
+        btn.className = 'tab-btn ' + (t===v ? 'tab-active' : 'tab-inactive');
+    });
+    const needsFilters = ['gyms','fighters','fights'].includes(v);
+    el('filters').style.display = needsFilters ? 'flex' : 'none';
+    renderView();
+}
+
+function handleUserBtn() {
+    if(currentUser) renderProfilePanel();
+    else openAuthModal();
+}
+
+// ─── FILTERS ─────────────────────────────────────────────────
+function getFilters() {
+    return {
+        city: el('city-filter').value,
+        type: el('type-filter').value,
+        q: el('search-input').value.toLowerCase()
+    };
+}
+
+function applyFilters() { renderView(); }
+
+// ─── RENDER ───────────────────────────────────────────────────
+function renderView() {
+    const main = el('main');
+    main.innerHTML = '';
+    main.className = 'animate-fade-in';
+    if(currentView==='gyms') renderGyms(main);
+    else if(currentView==='fighters') renderFighters(main);
+    else if(currentView==='fights') renderFights(main);
+    else if(currentView==='deals') renderDeals(main);
+}
+
+// ─── GYMS ─────────────────────────────────────────────────────
+function renderGyms(main) {
+    const {city,type,q} = getFilters();
+    const filtered = gyms.filter(g => {
+        const loc = `${g.city||''} ${g.location||''} ${g.city_country||''}`.toLowerCase();
+        return (city==='All'||loc.includes(city.toLowerCase())) &&
+               (type==='All'||( g.disciplines||'').toLowerCase().includes(type.toLowerCase())) &&
+               (g.name||'').toLowerCase().includes(q);
+    });
+    const visible = currentUser ? filtered : filtered.slice(0,8);
+
+    const header = h('div',{style:'margin-bottom:24px;display:flex;align-items:flex-end;justify-content:space-between;'},
+        h('div',{},
+            h('h2',{style:'font-size:1.875rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.05em;margin:0 0 4px;'},'Gyms'),
+            h('p',{style:'font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#9ca3af;margin:0;'},`${filtered.length} locations worldwide`)
+        )
+    );
+    main.appendChild(header);
+
+    const grid = h('div',{class:'grid-4'});
+    visible.forEach((gym,idx) => {
+        if(idx===3) grid.appendChild(adCard());
+        grid.appendChild(gymCard(gym));
+    });
+    if(!currentUser && filtered.length>8) grid.appendChild(registerCTA('See All Gyms',`${filtered.length-8} more gyms unlocked`));
+    main.appendChild(grid);
+}
+
+function gymCard(gym) {
+    const div = h('div',{class:'card'});
+    div.onclick = () => openGymModal(gym);
+    const img = gym.image_url || 'https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=600';
+    div.innerHTML = `
+        <div style="position:relative;height:208px;overflow:hidden;background:#f3f4f6;flex-shrink:0;">
+            <img src="${img}" style="width:100%;height:100%;object-fit:cover;transition:transform .5s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" alt="${gym.name||''}">
+            ${gym.name?.toLowerCase().includes('bangtao') ? '<span style="position:absolute;top:12px;left:12px;background:#d7df22;color:black;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;font-style:italic;padding:2px 8px;border-radius:4px;">Featured</span>' : ''}
+            ${(gym.hygiene_score>=80) ? '<span style="position:absolute;top:12px;right:12px;background:black;color:#d7df22;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;font-style:italic;padding:2px 8px;border-radius:4px;">Clean ✓</span>' : ''}
+        </div>
+        <div style="padding:1.5rem;display:flex;flex-direction:column;flex:1;">
+            <div style="display:flex;align-items:center;gap:4px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#9ca3af;margin-bottom:4px;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${gym.city_country||gym.city||gym.location||''}
             </div>
-        );
+            <h3 style="font-size:1.1rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.02em;margin:0 0 16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${gym.name||''}</h3>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:12px 0;border-top:1px solid #f3f4f6;border-bottom:1px solid #f3f4f6;margin-bottom:16px;text-align:center;">
+                <div><p style="font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:-.02em;color:#9ca3af;margin:0 0 6px;">Here Now</p><span style="font-size:1.1rem;font-weight:900;">—</span></div>
+                <div style="border-left:1px solid #f3f4f6;border-right:1px solid #f3f4f6;"><p style="font-size:7px;font-weight:900;text-transform:uppercase;color:#9ca3af;margin:0 0 6px;">Visit Soon</p><span style="font-size:1.1rem;font-weight:900;">—</span></div>
+                <div><p style="font-size:7px;font-weight:900;text-transform:uppercase;color:#9ca3af;margin:0 0 6px;">Was Here</p><span style="font-size:1.1rem;font-weight:900;">—</span></div>
+            </div>
+            <div style="margin-bottom:16px;">${metricBar('Hygiene',gym.hygiene_score).outerHTML}</div>
+            <button class="btn btn-dark" style="width:100%;padding:10px;border-radius:.75rem;font-size:9px;margin-top:auto;">View Details</button>
+        </div>`;
+    return div;
+}
 
-        // Avatar stack for gym cards
-        const AvatarStack = ({ gymId, profiles }) => {
-            const attendees = profiles.filter(p => p.current_gym_id == gymId).slice(0, 3);
-            if (attendees.length === 0) return <span className="text-xs text-gray-300 font-black">—</span>;
-            return (
-                <div className="flex -space-x-2">
-                    {attendees.map((p, i) => (
-                        <img key={i} src={p.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.full_name)} className="inline-block h-7 w-7 rounded-full ring-2 ring-white object-cover" alt={p.full_name} />
-                    ))}
+function openGymModal(gym) {
+    const img = gym.image_url || 'https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=600';
+    const c = el('gym-modal-content');
+    c.style.cssText = 'display:flex;flex-direction:column;max-height:92vh;';
+    c.innerHTML = `
+        <div style="display:flex;flex-direction:column;overflow:hidden;">
+            <div style="height:220px;overflow:hidden;background:#f3f4f6;flex-shrink:0;"><img src="${img}" style="width:100%;height:100%;object-fit:cover;" alt="${gym.name}"></div>
+            <div style="padding:2rem;overflow-y:auto;" class="no-scrollbar">
+                <p style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#9ca3af;margin:0 0 4px;">${gym.city_country||gym.city||gym.location||''}</p>
+                <h2 style="font-size:1.5rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.03em;margin:0 0 24px;">${gym.name||''}</h2>
+                <div style="background:#f9fafb;border-radius:1rem;padding:1.5rem;display:grid;grid-template-columns:repeat(3,1fr);text-align:center;border:1px solid #f3f4f6;margin-bottom:24px;">
+                    <div><p style="font-size:8px;font-weight:900;text-transform:uppercase;color:#9ca3af;margin:0 0 8px;">Here Now</p><span style="font-size:1.2rem;font-weight:900;">—</span></div>
+                    <div style="border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;"><p style="font-size:8px;font-weight:900;text-transform:uppercase;color:#9ca3af;margin:0 0 8px;">Visit Soon</p><span style="font-size:1.2rem;font-weight:900;">—</span></div>
+                    <div><p style="font-size:8px;font-weight:900;text-transform:uppercase;color:#9ca3af;margin:0 0 8px;">Was Here</p><span style="font-size:1.2rem;font-weight:900;">—</span></div>
                 </div>
-            );
-        };
-
-        // ============================================================
-        // MAIN APP
-        // ============================================================
-        const App = () => {
-            const [view, setView] = useState("gyms");
-            const [user, setUser] = useState(null);
-            const [loading, setLoading] = useState(true);
-
-            // Data
-            const [gyms, setGyms] = useState([]);
-            const [fights, setFights] = useState([]);
-            const [gear, setGear] = useState([]);
-            const [sponsors, setSponsors] = useState([]);
-            const [profiles, setProfiles] = useState([]);
-
-            // UI state
-            const [searchQuery, setSearchQuery] = useState("");
-            const [activeCity, setActiveCity] = useState("All");
-            const [activeType, setActiveType] = useState("All");
-            const [selectedGym, setSelectedGym] = useState(null);
-            const [selectedFighter, setSelectedFighter] = useState(null);
-            const [showAuthModal, setShowAuthModal] = useState(false);
-            const [showProfilePanel, setShowProfilePanel] = useState(false);
-            const [revealedSponsors, setRevealedSponsors] = useState(new Set());
-            const [revealedFights, setRevealedFights] = useState(new Set());
-            const [copiedShareId, setCopiedShareId] = useState(null);
-            const [dealsTab, setDealsTab] = useState("gear"); // "gear" | "sponsors"
-            const [fightsTab, setFightsTab] = useState("matchmaking"); // "matchmaking" | "events"
-
-            // Auth form
-            const [email, setEmail] = useState("");
-            const [password, setPassword] = useState("");
-            const [confirmPassword, setConfirmPassword] = useState("");
-            const [fullName, setFullName] = useState("");
-            const [authError, setAuthError] = useState("");
-            const [isLogin, setIsLogin] = useState(true);
-
-            // Profile editing
-            const [isEditingProfile, setIsEditingProfile] = useState(false);
-            const [editFields, setEditFields] = useState({});
-
-            const sortGyms = (data) => [...data].sort((a, b) => {
-                const aFeat = a.name?.toLowerCase().includes("bangtao");
-                const bFeat = b.name?.toLowerCase().includes("bangtao");
-                if (aFeat && !bFeat) return -1;
-                if (!aFeat && bFeat) return 1;
-                return (b.upvotes || 0) - (a.upvotes || 0);
-            });
-
-            const sortGear = (data) => [...data].sort((a, b) => {
-                const aRR = a.brand_name?.toLowerCase().includes("rest round");
-                const bRR = b.brand_name?.toLowerCase().includes("rest round");
-                if (aRR && !bRR) return -1;
-                if (!aRR && bRR) return 1;
-                return 0;
-            });
-
-            const loadData = async () => {
-                setLoading(true);
-                const [gymRes, fightRes, gearRes, sponsorRes, profileRes] = await Promise.all([
-                    supabase.from('gyms').select('*'),
-                    supabase.from('fights').select('*').order('event_date', { ascending: true }),
-                    supabase.from('gear_discounts').select('*'),
-                    supabase.from('sponsors').select('*'),
-                    supabase.from('profiles').select('*')
-                ]);
-                if (gymRes.data) setGyms(sortGyms(gymRes.data));
-                if (fightRes.data) setFights(fightRes.data);
-                if (gearRes.data) setGear(sortGear(gearRes.data));
-                if (sponsorRes.data) setSponsors(sponsorRes.data);
-                if (profileRes.data) setProfiles(profileRes.data);
-                setLoading(false);
-            };
-
-            useEffect(() => {
-                loadData();
-                supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
-                const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
-                return () => subscription.unsubscribe();
-            }, []);
-
-            const handleAuth = async (e) => {
-                e.preventDefault();
-                setAuthError("");
-                if (isLogin) {
-                    const { error } = await supabase.auth.signInWithPassword({ email, password });
-                    if (error) setAuthError(error.message);
-                    else { setShowAuthModal(false); setShowProfilePanel(true); }
-                } else {
-                    if (password !== confirmPassword) { setAuthError("Passwords do not match."); return; }
-                    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
-                    if (error) setAuthError(error.message);
-                    else {
-                        if (data.user) {
-                            await supabase.from('profiles').insert([{ id: data.user.id, full_name: fullName || "Athlete", username: email.split('@')[0], home_gym: "Not Set" }]);
-                        }
-                        setAuthError("Check your email to confirm your account.");
-                        setIsLogin(true);
-                    }
-                }
-            };
-
-            const myProfile = profiles.find(p => p.id === user?.id) || {};
-
-            const handleUpdateProfile = async () => {
-                if (!user) return;
-                const { error } = await supabase.from('profiles').update(editFields).eq('id', user.id);
-                if (!error) { await loadData(); setIsEditingProfile(false); }
-            };
-
-            const handleShareFight = (f) => {
-                const url = `${window.location.origin}${window.location.pathname}?view=fights&id=${f.id}`;
-                navigator.clipboard?.writeText(url).catch(() => {
-                    const ta = document.createElement("textarea");
-                    ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-                });
-                setCopiedShareId(f.id); setTimeout(() => setCopiedShareId(null), 2000);
-            };
-
-            const dynamicCities = useMemo(() => {
-                const locs = [
-                    ...gyms.map(g => g.city_country || g.city).filter(Boolean),
-                    ...profiles.map(p => p.city).filter(Boolean)
-                ];
-                return [...new Set(locs)].sort();
-            }, [gyms, profiles]);
-
-            // ---- FILTERED DATA ----
-            const filteredGyms = gyms.filter(g => {
-                const loc = `${g.city} ${g.location} ${g.city_country}`.toLowerCase();
-                const matchCity = activeCity === "All" || loc.includes(activeCity.toLowerCase());
-                const matchType = activeType === "All" || g.disciplines?.toLowerCase().includes(activeType.toLowerCase());
-                return matchCity && matchType && g.name?.toLowerCase().includes(searchQuery.toLowerCase());
-            });
-
-            const filteredFighters = profiles.filter(p => {
-                const matchCity = activeCity === "All" || (p.city || "").toLowerCase().includes(activeCity.toLowerCase());
-                const matchType = activeType === "All" || (p.disciplines || "").toLowerCase().includes(activeType.toLowerCase());
-                const matchSearch = (p.full_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    (p.username || "").toLowerCase().includes(searchQuery.toLowerCase());
-                return matchCity && matchType && matchSearch;
-            });
-
-            const filteredFights = fights.filter(f => {
-                const loc = `${f.city} ${f.location}`.toLowerCase();
-                const matchCity = activeCity === "All" || loc.includes(activeCity.toLowerCase());
-                const matchType = activeType === "All" || f.fight_type?.toLowerCase().includes(activeType.toLowerCase());
-                return matchCity && matchType && f.event_name?.toLowerCase().includes(searchQuery.toLowerCase());
-            });
-
-            const filteredGear = gear.filter(item =>
-                item.brand_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                item.product_name?.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-            const filteredSponsors = sponsors.filter(s =>
-                s.brand_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                s.focus?.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-
-            // ---- NAV TABS ----
-            const TABS = [
-                { id: 'gyms', label: 'Gyms', icon: 'map-pin' },
-                { id: 'fighters', label: 'Fighters', icon: 'users' },
-                { id: 'fights', label: 'Fights', icon: 'swords' },
-                { id: 'deals', label: 'Deals', icon: 'tag' },
-            ];
-
-            const needsFilters = ['gyms', 'fighters', 'fights'].includes(view);
-
-            const changeView = (v) => {
-                setView(v); setSearchQuery(""); setActiveCity("All"); setActiveType("All");
-                setShowProfilePanel(false); setSelectedGym(null); setSelectedFighter(null);
-            };
-
-            // =========================================================
-            // RENDER
-            // =========================================================
-            return (
-                <div className="min-h-screen bg-white text-black selection-brand font-['Montserrat'] overflow-x-hidden">
-
-                    {/* ── NAV ─────────────────────────────────────── */}
-                    <nav className="sticky top-0 z-[100] bg-white border-b border-gray-100 h-16 flex items-center justify-between px-4 md:px-12 shadow-sm">
-                        {/* Logo */}
-                        <button className="flex items-center gap-3 group shrink-0" onClick={() => changeView('gyms')}>
-                            <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shadow-lg border-2 border-transparent group-hover:border-[#d7df22] transition-all overflow-hidden">
-                                <svg viewBox="0 0 100 100" className="w-full h-full p-1.5">
-                                    <text x="50%" y="45%" textAnchor="middle" fill="#d7df22" fontFamily="Arial Black, sans-serif" fontSize="18" fontWeight="900" style={{letterSpacing:'-1.5px'}}>FIGHTER</text>
-                                    <text x="50%" y="82%" textAnchor="middle" fill="#d7df22" fontFamily="Arial Black, sans-serif" fontSize="36" fontWeight="900" style={{letterSpacing:'-1.5px'}}>LIST</text>
-                                </svg>
-                            </div>
-                            <span className="text-xl font-black italic uppercase tracking-tighter leading-none hidden sm:block">FIGHTER LIST</span>
-                        </button>
-
-                        {/* Tabs */}
-                        <div className="flex gap-0.5 bg-gray-50 p-1 rounded-full shadow-inner border border-gray-100">
-                            {TABS.map(tab => (
-                                <button key={tab.id} onClick={() => changeView(tab.id)}
-                                    className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full text-[9px] sm:text-[10px] font-black uppercase transition-all ${view === tab.id && !showProfilePanel ? 'bg-black text-[#d7df22] shadow-md' : 'text-gray-400 hover:text-black'}`}>
-                                    <Icon name={tab.icon} size={13} />
-                                    <span className="hidden md:inline">{tab.label}</span>
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* User button */}
-                        <button onClick={() => user ? setShowProfilePanel(!showProfilePanel) : setShowAuthModal(true)}
-                            className={`p-2.5 rounded-full shadow-md transition-all active:scale-90 shrink-0 ${showProfilePanel ? 'bg-[#d7df22] text-black' : 'bg-black text-[#d7df22]'}`}>
-                            <Icon name="user" size={20} />
-                        </button>
-                    </nav>
-
-                    {/* ── SEARCH & FILTERS ────────────────────────── */}
-                    {!showProfilePanel && needsFilters && (
-                        <div className="w-full px-4 md:px-12 pt-5 pb-3 flex flex-col sm:flex-row gap-3 items-center max-w-[1400px] mx-auto animate-fade-in">
-                            <div className="flex gap-2 w-full sm:w-auto">
-                                <div className="relative flex-1 sm:w-44">
-                                    <Icon name="map-pin" size={13} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                                    <select value={activeCity} onChange={e => setActiveCity(e.target.value)}
-                                        className="w-full bg-gray-50 border-2 border-transparent hover:border-black p-3.5 pl-9 pr-6 rounded-full font-black uppercase text-[9px] tracking-widest outline-none cursor-pointer transition-all">
-                                        <option value="All">All Cities</option>
-                                        {dynamicCities.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </div>
-                                <div className="relative flex-1 sm:w-40">
-                                    <Icon name="swords" size={13} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                                    <select value={activeType} onChange={e => setActiveType(e.target.value)}
-                                        className="w-full bg-gray-50 border-2 border-transparent hover:border-black p-3.5 pl-9 pr-6 rounded-full font-black uppercase text-[9px] tracking-widest outline-none cursor-pointer transition-all">
-                                        <option value="All">All Styles</option>
-                                        <option>MMA</option><option>Muay Thai</option><option>BJJ</option><option>Boxing</option><option>Wrestling</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="relative flex-1 w-full">
-                                <Icon name="search" size={17} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300" />
-                                <input type="text" placeholder={`Search ${view}...`} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                                    className="w-full bg-gray-50 border-2 border-transparent focus:border-black focus:bg-white p-3.5 pl-12 rounded-full font-bold outline-none transition-all" />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ── MAIN ────────────────────────────────────── */}
-                    <main className="w-full px-4 md:px-12 py-6 min-h-[60vh] max-w-[1400px] mx-auto">
-                        {loading ? (
-                            <div className="py-32 text-center text-gray-300 font-black uppercase tracking-[0.4em] text-sm animate-pulse italic">Loading Intelligence…</div>
-                        ) : showProfilePanel && user ? (
-                            // ── PROFILE PANEL ─────────────────────
-                            <ProfilePanel
-                                myProfile={myProfile}
-                                user={user}
-                                gyms={gyms}
-                                isEditing={isEditingProfile}
-                                editFields={editFields}
-                                setEditFields={setEditFields}
-                                onEdit={() => { setEditFields({...myProfile}); setIsEditingProfile(true); }}
-                                onSave={handleUpdateProfile}
-                                onCancel={() => setIsEditingProfile(false)}
-                                onSignOut={() => { supabase.auth.signOut(); setShowProfilePanel(false); }}
-                            />
-                        ) : (
-                            <div className="animate-fade-in">
-
-                                {/* ── GYMS ── */}
-                                {view === 'gyms' && (
-                                    <GymsView
-                                        gyms={filteredGyms}
-                                        profiles={profiles}
-                                        user={user}
-                                        onSignUp={() => setShowAuthModal(true)}
-                                        onSelect={setSelectedGym}
-                                    />
-                                )}
-
-                                {/* ── FIGHTERS ── */}
-                                {view === 'fighters' && (
-                                    <FightersView
-                                        fighters={filteredFighters}
-                                        user={user}
-                                        onSignUp={() => setShowAuthModal(true)}
-                                        onSelect={setSelectedFighter}
-                                    />
-                                )}
-
-                                {/* ── FIGHTS ── */}
-                                {view === 'fights' && (
-                                    <FightsView
-                                        fights={filteredFights}
-                                        user={user}
-                                        onSignUp={() => setShowAuthModal(true)}
-                                        fightsTab={fightsTab}
-                                        setFightsTab={setFightsTab}
-                                        revealedFights={revealedFights}
-                                        setRevealedFights={setRevealedFights}
-                                        copiedShareId={copiedShareId}
-                                        onShare={handleShareFight}
-                                    />
-                                )}
-
-                                {/* ── DEALS ── */}
-                                {view === 'deals' && (
-                                    <DealsView
-                                        gear={filteredGear}
-                                        sponsors={filteredSponsors}
-                                        user={user}
-                                        onSignUp={() => setShowAuthModal(true)}
-                                        dealsTab={dealsTab}
-                                        setDealsTab={setDealsTab}
-                                        revealedSponsors={revealedSponsors}
-                                        setRevealedSponsors={setRevealedSponsors}
-                                    />
-                                )}
-
-                            </div>
-                        )}
-                    </main>
-
-                    {/* ── REST ROUND FOOTER BANNER ─────────────────── */}
-                    <div className="w-full px-4 md:px-12 py-10">
-                        <a href="https://restround.co" target="_blank"
-                            className="block bg-black rounded-[3rem] p-10 md:p-14 relative overflow-hidden group shadow-2xl border-2 border-[#d7df22]/10 hover:border-[#d7df22]/40 transition-all">
-                            <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-[#d7df22]/10 to-transparent pointer-events-none"></div>
-                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 relative z-10">
-                                <div className="space-y-3">
-                                    <p className="text-[#d7df22] text-[9px] font-black uppercase tracking-[0.4em] italic">Powered by</p>
-                                    <h2 className="text-4xl md:text-5xl font-black italic uppercase text-white tracking-tighter leading-none">REST ROUND™</h2>
-                                    <p className="text-gray-400 text-sm font-bold uppercase tracking-widest italic">HOCL Combat Skin & Gear Hygiene</p>
-                                </div>
-                                <div className="bg-[#d7df22] text-black px-10 py-4 rounded-2xl font-black uppercase italic tracking-widest text-sm group-hover:scale-105 transition-transform shadow-xl whitespace-nowrap">
-                                    Shop Rest Round™ →
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-
-                    {/* ── FOOTER ───────────────────────────────────── */}
-                    <footer className="border-t border-gray-100 py-10">
-                        <div className="px-4 md:px-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-[10px] font-black uppercase tracking-[0.2em] italic text-gray-400">
-                            <div className="flex items-center gap-4">
-                                <a href="https://instagram.com/fighterlist_com" target="_blank" className="hover:text-black transition-colors"><InstagramIcon size={15}/></a>
-                                <a href="https://wa.me/66924692066" target="_blank" className="hover:text-black transition-colors"><WhatsAppIcon size={15}/></a>
-                                <a href="https://x.com" target="_blank" className="hover:text-black transition-colors"><XIcon size={13}/></a>
-                            </div>
-                            <span className="hidden md:inline text-gray-200">|</span>
-                            <a href="mailto:TEAM.RESTROUND@GMAIL.COM" className="hover:text-black transition-colors">team.restround@gmail.com</a>
-                            <span className="hidden md:inline text-gray-200">|</span>
-                            <span>Fighter List © 2026 · Powered by Rest Round™</span>
-                        </div>
-                    </footer>
-
-                    {/* ── GYM MODAL ────────────────────────────────── */}
-                    {selectedGym && (
-                        <GymModal gym={selectedGym} profiles={profiles} onClose={() => setSelectedGym(null)} />
-                    )}
-
-                    {/* ── FIGHTER MODAL ────────────────────────────── */}
-                    {selectedFighter && (
-                        <FighterModal fighter={selectedFighter} gyms={gyms} onClose={() => setSelectedFighter(null)} />
-                    )}
-
-                    {/* ── AUTH MODAL ───────────────────────────────── */}
-                    {showAuthModal && (
-                        <AuthModal
-                            isLogin={isLogin} setIsLogin={setIsLogin}
-                            email={email} setEmail={setEmail}
-                            password={password} setPassword={setPassword}
-                            confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
-                            fullName={fullName} setFullName={setFullName}
-                            authError={authError} setAuthError={setAuthError}
-                            onSubmit={handleAuth}
-                            onClose={() => { setShowAuthModal(false); setAuthError(""); }}
-                        />
-                    )}
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px;">
+                    ${metricBar('Hygiene',gym.hygiene_score).outerHTML}
+                    ${metricBar('Food Safety',gym.food_safety).outerHTML}
+                    ${metricBar('English',gym.english_score).outerHTML}
+                    ${metricBar('Safe for Women',gym.safe_for_women).outerHTML}
                 </div>
-            );
-        };
+                ${gym.website ? `<a href="${gym.website}" target="_blank" class="btn btn-dark" style="width:100%;padding:16px;border-radius:.75rem;font-size:10px;text-decoration:none;display:block;text-align:center;">Visit Gym Website →</a>` : ''}
+            </div>
+        </div>`;
+    openModal('gym-modal');
+}
 
-        // ============================================================
-        // GYMS VIEW
-        // ============================================================
-        const GymsView = ({ gyms, profiles, user, onSignUp, onSelect }) => {
-            const visible = user ? gyms : gyms.slice(0, 8);
-            return (
-                <div>
-                    <div className="mb-6 flex items-end justify-between">
-                        <div>
-                            <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none">Gyms</h2>
-                            <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">{gyms.length} locations worldwide</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {visible.map((gym, idx) => {
-                            const els = [];
-                            if (idx === 3) els.push(<AdCard key="ad" />);
-                            els.push(
-                                <div key={gym.id} className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-lg cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col" onClick={() => onSelect(gym)}>
-                                    <div className="relative h-52 overflow-hidden bg-gray-100 shrink-0">
-                                        <img src={gym.image_url || "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=600"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={gym.name} />
-                                        {gym.name?.toLowerCase().includes("bangtao") && (
-                                            <span className="absolute top-3 left-3 bg-[#d7df22] text-black text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest italic">Featured</span>
-                                        )}
-                                        {gym.hygiene_score >= 80 && (
-                                            <span className="absolute top-3 right-3 bg-black text-[#d7df22] text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest italic">Clean ✓</span>
-                                        )}
-                                    </div>
-                                    <div className="p-6 flex flex-col flex-1">
-                                        <div className="flex items-center gap-1 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-1">
-                                            <Icon name="map-pin" size={11} className="text-red-500" />{gym.city_country || gym.city || gym.location}
-                                        </div>
-                                        <h3 className="text-lg font-black italic uppercase leading-tight mb-4 truncate">{gym.name}</h3>
+// ─── FIGHTERS ─────────────────────────────────────────────────
+function renderFighters(main) {
+    const {city,type,q} = getFilters();
+    const filtered = profiles.filter(p => {
+        return (city==='All'||(p.city||'').toLowerCase().includes(city.toLowerCase())) &&
+               (type==='All'||(p.disciplines||'').toLowerCase().includes(type.toLowerCase())) &&
+               ((p.full_name||'').toLowerCase().includes(q)||(p.username||'').toLowerCase().includes(q));
+    });
+    const mockFighters = [
+        {id:'m1',full_name:'Alex V.',username:'alexv_mma',city:'Phuket, TH',disciplines:'MMA, Muay Thai',weight_class:'Featherweight',open_to:'Sparring, Fights'},
+        {id:'m2',full_name:'Kai Santos',username:'kaisantos_bjj',city:'Bangkok, TH',disciplines:'BJJ, Wrestling',weight_class:'Middleweight',open_to:'Sparring, Sponsors'},
+        {id:'m3',full_name:'Maya Torres',username:'maya_boxing',city:'Chiang Mai, TH',disciplines:'Boxing',weight_class:'Flyweight',open_to:'Fights, Sponsors'},
+        {id:'m4',full_name:'Ryan Burke',username:'ryan_muaythai',city:'Amsterdam, NL',disciplines:'Muay Thai',weight_class:'Welterweight',open_to:'Sparring'},
+    ];
+    const visible = currentUser ? filtered : (filtered.length ? filtered.slice(0,8) : mockFighters);
 
-                                        {/* Who's here */}
-                                        <div className="grid grid-cols-3 gap-1 py-3 border-y border-gray-100 mb-4 text-center">
-                                            <div className="space-y-1.5">
-                                                <p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter">Here Now</p>
-                                                <AvatarStack gymId={gym.id} profiles={profiles} />
-                                            </div>
-                                            <div className="space-y-1.5 border-x border-gray-100">
-                                                <p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter">Visit Soon</p>
-                                                <span className="text-lg font-black leading-none block">—</span>
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter">Was Here</p>
-                                                <span className="text-lg font-black leading-none block">—</span>
-                                            </div>
-                                        </div>
+    main.appendChild(h('div',{style:'margin-bottom:24px;'},
+        h('h2',{style:'font-size:1.875rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.05em;margin:0 0 4px;'},'Fighters'),
+        h('p',{style:'font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#9ca3af;margin:0;'},'Find sparring partners, training camps & talent')
+    ));
 
-                                        {/* Hygiene bar preview */}
-                                        <div className="mb-4">
-                                            <MetricBar label="Hygiene" value={gym.hygiene_score} icon="shield-check" />
-                                        </div>
+    const grid = h('div',{class:'grid-4'});
+    visible.forEach((f,idx) => {
+        if(idx===3) grid.appendChild(adCard());
+        grid.appendChild(fighterCard(f));
+    });
+    if(!currentUser) grid.appendChild(registerCTA('See All Fighters','Find sparring partners in your city'));
+    main.appendChild(grid);
+}
 
-                                        <button className="w-full bg-black text-[#d7df22] py-2.5 rounded-xl font-black uppercase text-[9px] tracking-[0.2em] mt-auto hover:bg-[#d7df22] hover:text-black transition-colors">View Details</button>
-                                    </div>
-                                </div>
-                            );
-                            return els;
-                        })}
-                        {!user && gyms.length > 8 && (
-                            <RegisterCTA title="See All Gyms" text={`${gyms.length - 8} more gyms unlocked`} onSignUp={onSignUp} />
-                        )}
-                    </div>
-                </div>
-            );
-        };
+function fighterCard(f) {
+    const div = h('div',{class:'card'});
+    div.onclick = () => openFighterModal(f);
+    const disciplines = (f.disciplines||'').split(',').map(d=>d.trim()).filter(Boolean)
+        .map(d=>`<span style="background:#f3f4f6;color:#4b5563;font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;padding:2px 8px;border-radius:4px;display:inline-block;">${d}</span>`).join(' ');
+    const openTo = (f.open_to||'').split(',').map(o=>o.trim()).slice(0,2)
+        .map(o=>`<span style="background:rgba(0,0,0,.8);color:#d7df22;font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;padding:2px 8px;border-radius:4px;">${o}</span>`).join(' ');
+    div.innerHTML = `
+        <div style="position:relative;height:192px;background:#f9fafb;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            ${f.avatar_url ? `<img src="${f.avatar_url}" style="width:100%;height:100%;object-fit:cover;" alt="${f.full_name}">` :
+            `<div style="width:80px;height:80px;border-radius:9999px;background:black;display:flex;align-items:center;justify-content:center;"><span style="color:#d7df22;font-size:1.25rem;font-weight:900;font-style:italic;">${getInitials(f.full_name)}</span></div>`}
+            ${openTo ? `<div style="position:absolute;bottom:12px;left:12px;right:12px;display:flex;gap:4px;flex-wrap:wrap;">${openTo}</div>` : ''}
+        </div>
+        <div style="padding:1.5rem;display:flex;flex-direction:column;flex:1;">
+            <div style="display:flex;align-items:center;gap:4px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#9ca3af;margin-bottom:4px;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${f.city||'Location TBD'}
+            </div>
+            <h3 style="font-size:1.1rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.02em;margin:0 0 4px;">${f.full_name||''}</h3>
+            ${f.username ? `<p style="font-size:9px;font-weight:900;color:#9ca3af;letter-spacing:.1em;margin:0 0 12px;">@${f.username}</p>` : ''}
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:16px;">${disciplines}${f.weight_class ? `<span style="background:#d7df22;color:black;font-size:7px;font-weight:900;text-transform:uppercase;padding:2px 8px;border-radius:4px;">${f.weight_class}</span>` : ''}</div>
+            <button class="btn btn-dark" style="width:100%;padding:10px;border-radius:.75rem;font-size:9px;margin-top:auto;">View Profile</button>
+        </div>`;
+    return div;
+}
 
-        // ============================================================
-        // FIGHTERS VIEW  (NEW)
-        // ============================================================
-        const FightersView = ({ fighters, user, onSignUp, onSelect }) => {
-            const visible = user ? fighters : fighters.slice(0, 8);
+function openFighterModal(f) {
+    const c = el('fighter-modal-content');
+    const disciplines = (f.disciplines||'').split(',').map(d=>d.trim()).filter(Boolean)
+        .map(d=>`<span style="background:black;color:#d7df22;font-size:7px;font-weight:900;text-transform:uppercase;padding:3px 12px;border-radius:9999px;letter-spacing:.1em;">${d}</span>`).join(' ');
+    const openTo = (f.open_to||'').split(',').map(o=>o.trim()).filter(Boolean)
+        .map(o=>`<span style="background:#d7df22;color:black;font-size:7px;font-weight:900;text-transform:uppercase;padding:3px 12px;border-radius:9999px;">${o}</span>`).join(' ');
+    c.innerHTML = `
+        <div style="background:black;padding:2.5rem;text-align:center;">
+            ${f.avatar_url ? `<img src="${f.avatar_url}" style="width:112px;height:112px;border-radius:9999px;border:4px solid #d7df22;margin:0 auto 20px;display:block;object-fit:cover;" alt="${f.full_name}">` :
+            `<div style="width:112px;height:112px;border-radius:9999px;border:4px solid #d7df22;background:#111;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;"><span style="color:#d7df22;font-size:2rem;font-weight:900;font-style:italic;">${getInitials(f.full_name)}</span></div>`}
+            <h2 style="font-size:1.5rem;font-weight:900;font-style:italic;text-transform:uppercase;color:white;letter-spacing:-.03em;margin:0;">${f.full_name||''}</h2>
+            ${f.username ? `<a href="https://instagram.com/${f.username}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;color:#d7df22;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;background:rgba(255,255,255,.1);padding:6px 16px;border-radius:9999px;text-decoration:none;">@${f.username}</a>` : ''}
+        </div>
+        <div style="padding:2rem;overflow-y:auto;max-height:50vh;" class="no-scrollbar">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                <div style="background:#f9fafb;padding:16px;border-radius:.75rem;"><p style="font-size:8px;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;margin:0 0 4px;">Location</p><p style="font-weight:900;font-style:italic;text-transform:uppercase;font-size:14px;margin:0;">${f.city||'—'}</p></div>
+                <div style="background:#f9fafb;padding:16px;border-radius:.75rem;"><p style="font-size:8px;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;margin:0 0 4px;">Weight Class</p><p style="font-weight:900;font-style:italic;text-transform:uppercase;font-size:14px;margin:0;">${f.weight_class||'—'}</p></div>
+            </div>
+            ${disciplines ? `<div style="background:#f9fafb;padding:16px;border-radius:.75rem;margin-bottom:16px;"><p style="font-size:8px;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;margin:0 0 8px;">Disciplines</p><div style="display:flex;flex-wrap:wrap;gap:6px;">${disciplines}</div></div>` : ''}
+            ${openTo ? `<div style="background:rgba(215,223,34,.1);border:1px solid rgba(215,223,34,.3);padding:16px;border-radius:.75rem;"><p style="font-size:8px;font-weight:900;color:#6b7280;text-transform:uppercase;letter-spacing:.1em;margin:0 0 8px;">Open To</p><div style="display:flex;flex-wrap:wrap;gap:6px;">${openTo}</div></div>` : ''}
+            ${f.home_gym ? `<div style="background:#f9fafb;padding:16px;border-radius:.75rem;margin-top:16px;"><p style="font-size:8px;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;margin:0 0 4px;">Home Gym</p><p style="font-weight:900;font-style:italic;text-transform:uppercase;font-size:14px;margin:0;">${f.home_gym}</p></div>` : ''}
+        </div>`;
+    openModal('fighter-modal');
+}
 
-            // Mock data if DB has none yet
-            const mockFighters = [
-                { id: 'mock1', full_name: 'Alex V.', username: 'alexv_mma', city: 'Phuket, TH', disciplines: 'MMA, Muay Thai', weight_class: 'Featherweight', open_to: 'Sparring, Fights', avatar_url: '' },
-                { id: 'mock2', full_name: 'Kai Santos', username: 'kaisantos_bjj', city: 'Bangkok, TH', disciplines: 'BJJ, Wrestling', weight_class: 'Middleweight', open_to: 'Sparring, Sponsors', avatar_url: '' },
-                { id: 'mock3', full_name: 'Maya Torres', username: 'maya_boxing', city: 'Chiang Mai, TH', disciplines: 'Boxing', weight_class: 'Flyweight', open_to: 'Fights, Sponsors', avatar_url: '' },
-                { id: 'mock4', full_name: 'Ryan Burke', username: 'ryan_muaythai', city: 'Amsterdam, NL', disciplines: 'Muay Thai', weight_class: 'Welterweight', open_to: 'Sparring', avatar_url: '' },
-            ];
+// ─── FIGHTS ───────────────────────────────────────────────────
+function renderFights(main) {
+    const {city,type,q} = getFilters();
+    const filtered = fights.filter(f => {
+        const loc = `${f.city||''} ${f.location||''}`.toLowerCase();
+        return (city==='All'||loc.includes(city.toLowerCase())) &&
+               (type==='All'||(f.fight_type||'').toLowerCase().includes(type.toLowerCase())) &&
+               (f.event_name||'').toLowerCase().includes(q);
+    });
 
-            const display = visible.length > 0 ? visible : (user ? [] : mockFighters);
+    const header = h('div',{style:'margin-bottom:24px;display:flex;align-items:flex-end;justify-content:space-between;'},
+        h('div',{},
+            h('h2',{style:'font-size:1.875rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.05em;margin:0 0 4px;'},'Fights'),
+            h('p',{style:'font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#9ca3af;margin:0;'},'Find a fight or a partner')
+        )
+    );
+    main.appendChild(header);
 
-            const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) || '?';
+    // Sub-tabs
+    const subTabs = h('div',{style:'display:flex;gap:8px;margin-bottom:32px;'});
+    ['matchmaking','events'].forEach(t => {
+        const btn = h('button',{
+            class:'tab-btn '+(fightsSubTab===t?'tab-active':'tab-inactive'),
+            onclick:()=>{ fightsSubTab=t; renderView(); }
+        }, t==='matchmaking'?'Find a Fight':'Events');
+        subTabs.appendChild(btn);
+    });
+    main.appendChild(subTabs);
 
-            return (
-                <div>
-                    <div className="mb-6 flex items-end justify-between">
-                        <div>
-                            <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none">Fighters</h2>
-                            <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">Find sparring partners, training camps & talent</p>
-                        </div>
-                    </div>
+    const matchmaking = filtered.filter(f=>!f.event_date||f.is_callout);
+    const events = filtered.filter(f=>f.event_date&&!f.is_callout);
+    const display = fightsSubTab==='matchmaking' ? matchmaking : events;
+    const visible = currentUser ? display : display.slice(0,5);
+    const showList = visible.length ? visible : (currentUser ? [] : filtered.slice(0,5));
 
-                    {display.length === 0 && user && (
-                        <div className="py-20 text-center">
-                            <p className="text-gray-300 font-black uppercase tracking-widest text-sm italic">No fighters found. Be the first to complete your profile.</p>
-                        </div>
-                    )}
+    const list = h('div',{style:'max-width:48rem;display:flex;flex-direction:column;gap:12px;'});
+    showList.forEach(f => list.appendChild(fightRow(f)));
+    if(!currentUser && filtered.length>5) list.appendChild(registerCTA('Unlock All Fights','See full matchmaking board & event calendar'));
+    main.appendChild(list);
+}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {display.map((f, idx) => {
-                            const els = [];
-                            if (idx === 3) els.push(<AdCard key="ad" />);
-                            els.push(
-                                <div key={f.id} onClick={() => onSelect(f)}
-                                    className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-lg cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col">
-                                    {/* Avatar */}
-                                    <div className="relative bg-gray-50 h-48 flex items-center justify-center overflow-hidden">
-                                        {f.avatar_url ? (
-                                            <img src={f.avatar_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={f.full_name} />
-                                        ) : (
-                                            <div className="w-20 h-20 rounded-full bg-black flex items-center justify-center">
-                                                <span className="text-[#d7df22] text-xl font-black italic">{getInitials(f.full_name)}</span>
-                                            </div>
-                                        )}
-                                        {/* Open to badge */}
-                                        {f.open_to && (
-                                            <div className="absolute bottom-3 left-3 right-3 flex gap-1 flex-wrap">
-                                                {f.open_to.split(',').map(o => o.trim()).slice(0,2).map(o => (
-                                                    <span key={o} className="bg-black/80 backdrop-blur text-[#d7df22] text-[7px] font-black px-2 py-0.5 rounded uppercase tracking-widest">{o}</span>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="p-6 flex flex-col flex-1">
-                                        <div className="flex items-center gap-1 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-1">
-                                            <Icon name="map-pin" size={11} className="text-red-500" />{f.city || 'Location TBD'}
-                                        </div>
-                                        <h3 className="text-lg font-black italic uppercase leading-tight mb-1">{f.full_name}</h3>
-                                        {f.username && (
-                                            <p className="text-[9px] font-black text-gray-400 tracking-widest mb-3">@{f.username}</p>
-                                        )}
-                                        {/* Disciplines */}
-                                        <div className="flex flex-wrap gap-1 mb-4">
-                                            {(f.disciplines || '').split(',').map(d => d.trim()).filter(Boolean).map(d => (
-                                                <span key={d} className="bg-gray-100 text-gray-600 text-[7px] font-black px-2 py-0.5 rounded uppercase tracking-widest">{d}</span>
-                                            ))}
-                                            {f.weight_class && (
-                                                <span className="bg-[#d7df22] text-black text-[7px] font-black px-2 py-0.5 rounded uppercase tracking-widest">{f.weight_class}</span>
-                                            )}
-                                        </div>
-                                        <button className="w-full bg-black text-[#d7df22] py-2.5 rounded-xl font-black uppercase text-[9px] tracking-[0.2em] mt-auto hover:bg-[#d7df22] hover:text-black transition-colors">View Profile</button>
-                                    </div>
-                                </div>
-                            );
-                            return els;
-                        })}
-                        {!user && (
-                            <RegisterCTA title="See All Fighters" text="Find sparring partners in your city" onSignUp={onSignUp} />
-                        )}
-                    </div>
-                </div>
-            );
-        };
+function fightRow(f) {
+    const div = document.createElement('div');
+    div.style.cssText = 'background:white;border:2px solid #f3f4f6;border-radius:1.5rem;padding:16px;display:flex;align-items:center;gap:16px;transition:border-color .2s;';
+    div.onmouseenter = ()=>div.style.borderColor='black';
+    div.onmouseleave = ()=>div.style.borderColor='#f3f4f6';
 
-        // ============================================================
-        // FIGHTS VIEW  (split: matchmaking + events)
-        // ============================================================
-        const FightsView = ({ fights, user, onSignUp, fightsTab, setFightsTab, revealedFights, setRevealedFights, copiedShareId, onShare }) => {
-            const toggle = (id) => {
-                const s = new Set(revealedFights); s.has(id) ? s.delete(id) : s.add(id); setRevealedFights(s);
-            };
+    const dateParts = (f.event_date||'').split(' ');
+    const revealId = 'fight-'+f.id;
+    div.innerHTML = `
+        <div style="background:#f9fafb;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;border-radius:.75rem;min-width:70px;height:70px;border:1px solid #f3f4f6;text-align:center;flex-shrink:0;">
+            <p style="font-size:1.2rem;font-weight:900;font-style:italic;letter-spacing:-.05em;line-height:1;margin:0;">${dateParts[1]||'?'}</p>
+            <p style="font-size:8px;font-weight:900;color:#9ca3af;text-transform:uppercase;margin:0;">${dateParts[0]||'TBD'}</p>
+        </div>
+        <div style="flex:1;min-width:0;">
+            <span style="background:#d7df22;color:black;padding:1px 8px;border-radius:9999px;font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;font-style:italic;display:inline-block;margin-bottom:4px;">${f.is_callout?'Call Out':'Event'}</span>
+            <h3 style="font-size:1rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.03em;margin:0 0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.event_name||''}</h3>
+            <div style="display:flex;gap:12px;">
+                <span style="font-size:9px;font-weight:900;text-transform:uppercase;color:#9ca3af;letter-spacing:.1em;">${f.fight_type||'Open'}</span>
+                <span style="font-size:9px;font-weight:700;color:#9ca3af;">${f.city||''}</span>
+            </div>
+        </div>
+        <div id="${revealId}" style="display:flex;align-items:center;gap:8px;flex-shrink:0;"></div>`;
 
-            // split: events have a proper event_date; matchmaking = "call outs" or no date
-            const matchmaking = fights.filter(f => !f.event_date || f.is_callout);
-            const events = fights.filter(f => f.event_date && !f.is_callout);
-            const display = fightsTab === 'matchmaking' ? matchmaking : events;
-            const visibleDisplay = user ? display : display.slice(0, 5);
+    renderFightActions(f, el(revealId)||div.querySelector('#'+revealId));
+    return div;
+}
 
-            return (
-                <div>
-                    <div className="mb-6 flex items-end justify-between">
-                        <div>
-                            <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none">Fights</h2>
-                            <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">Find a fight or a partner</p>
-                        </div>
-                        {user && (
-                            <button className="bg-black text-[#d7df22] px-5 py-2.5 rounded-full font-black uppercase text-[9px] tracking-widest italic hover:bg-[#d7df22] hover:text-black transition-colors">
-                                + Post
-                            </button>
-                        )}
-                    </div>
+function renderFightActions(f, container) {
+    container.innerHTML = '';
+    if(revealedFights.has(f.id)) {
+        container.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;background:black;color:white;padding:8px 12px;border-radius:.75rem;" class="animate-fade-in">
+                <span style="font-size:9px;font-weight:900;font-style:italic;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.contact_info||''}</span>
+                <button onclick="copyText('${f.contact_info||''}')" style="background:none;border:none;cursor:pointer;color:#9ca3af;padding:2px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+                <button onclick="revealedFights.delete('${f.id}');renderView();" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.3);">✕</button>
+            </div>`;
+    } else {
+        const btn = h('button',{
+            class:'btn btn-dark',
+            style:'padding:10px 20px;border-radius:.75rem;font-size:9px;',
+            onclick:(e)=>{ e.stopPropagation(); revealedFights.add(f.id); renderView(); }
+        },'Contact');
+        container.appendChild(btn);
+    }
+}
 
-                    {/* Sub-tabs */}
-                    <div className="flex gap-2 mb-8">
-                        {[
-                            { id: 'matchmaking', label: 'Find a Fight', icon: 'hand-shake' },
-                            { id: 'events', label: 'Events', icon: 'calendar' }
-                        ].map(t => (
-                            <button key={t.id} onClick={() => setFightsTab(t.id)}
-                                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${fightsTab === t.id ? 'bg-black text-[#d7df22] shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                                <Icon name={t.id === 'matchmaking' ? 'swords' : 'calendar'} size={12} />{t.label}
-                            </button>
-                        ))}
-                    </div>
+// ─── DEALS ────────────────────────────────────────────────────
+function renderDeals(main) {
+    const q = el('search-input').value.toLowerCase();
+    const filteredGear = gear.filter(i=>(i.brand_name||'').toLowerCase().includes(q)||(i.product_name||'').toLowerCase().includes(q));
+    const filteredSponsors = sponsors.filter(s=>(s.brand_name||'').toLowerCase().includes(q)||(s.focus||'').toLowerCase().includes(q));
 
-                    <div className="max-w-3xl space-y-3">
-                        {(visibleDisplay.length === 0 ? fights.slice(0, user ? fights.length : 5) : visibleDisplay).map(f => (
-                            <div key={f.id} className="bg-white border-2 border-gray-100 p-4 rounded-[1.5rem] flex items-center gap-4 hover:border-black transition-all group">
-                                {/* Date block */}
-                                <div className="bg-gray-50 flex flex-col items-center justify-center p-3 rounded-xl min-w-[70px] h-[70px] border border-gray-100 text-center shrink-0">
-                                    <p className="text-xl font-black italic tracking-tighter leading-none">{f.event_date?.split(' ')[1] || '?'}</p>
-                                    <p className="text-[8px] font-black text-gray-400 uppercase">{f.event_date?.split(' ')[0] || 'TBD'}</p>
-                                </div>
-                                {/* Info */}
-                                <div className="flex-1 min-w-0 text-left">
-                                    <span className="bg-[#d7df22] text-black px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest italic inline-block mb-1">
-                                        {f.is_callout ? 'Call Out' : 'Event'}
-                                    </span>
-                                    <h3 className="text-base font-black italic uppercase leading-tight tracking-tighter truncate">{f.event_name}</h3>
-                                    <div className="flex items-center gap-3 mt-1">
-                                        <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">{f.fight_type || 'Open'}</span>
-                                        <span className="flex items-center gap-1 text-[9px] font-bold text-gray-400"><Icon name="map-pin" size={9} className="text-red-500"/>{f.city}</span>
-                                    </div>
-                                </div>
-                                {/* Actions */}
-                                <div className="flex items-center gap-2 shrink-0">
-                                    {!revealedFights.has(f.id) ? (
-                                        <>
-                                            <button onClick={() => toggle(f.id)} className="bg-black text-[#d7df22] px-5 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-[#d7df22] hover:text-black transition-all shadow-md">Contact</button>
-                                            <button onClick={() => onShare(f)} className={`p-2.5 rounded-xl transition-all border ${copiedShareId === f.id ? 'bg-green-500 text-white border-green-500' : 'bg-gray-50 border-gray-200 hover:border-black hover:bg-black hover:text-[#d7df22]'}`}>
-                                                <Icon name={copiedShareId === f.id ? 'check' : 'share-2'} size={14} />
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <div className="flex items-center gap-2 bg-black text-white px-3 py-2 rounded-xl animate-fade-in">
-                                            <span className="text-[9px] font-black italic truncate max-w-[90px]">{f.contact_info}</span>
-                                            <CopyButton text={f.contact_info} size={11} />
-                                            <button onClick={() => toggle(f.id)} className="text-white/40 hover:text-red-400"><Icon name="x" size={12} /></button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                        {!user && fights.length > 5 && (
-                            <div className="mt-6">
-                                <RegisterCTA title="Unlock All Fights" text="See full matchmaking board & event calendar" onSignUp={onSignUp} />
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        };
+    main.appendChild(h('div',{style:'margin-bottom:24px;'},
+        h('h2',{style:'font-size:1.875rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.05em;margin:0 0 4px;'},'Deals'),
+        h('p',{style:'font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#9ca3af;margin:0;'},'Gear discounts & sponsor connections')
+    ));
 
-        // ============================================================
-        // DEALS VIEW  (gear + sponsors merged)
-        // ============================================================
-        const DealsView = ({ gear, sponsors, user, onSignUp, dealsTab, setDealsTab, revealedSponsors, setRevealedSponsors }) => {
-            const toggleSponsor = (id) => {
-                const s = new Set(revealedSponsors); s.has(id) ? s.delete(id) : s.add(id); setRevealedSponsors(s);
-            };
+    const subTabs = h('div',{style:'display:flex;gap:8px;margin-bottom:32px;'});
+    [['gear','Gear Discounts'],['sponsors','Get Sponsored']].forEach(([t,label]) => {
+        subTabs.appendChild(h('button',{
+            class:'tab-btn '+(dealsSubTab===t?'tab-active':'tab-inactive'),
+            onclick:()=>{ dealsSubTab=t; renderView(); }
+        },label));
+    });
+    main.appendChild(subTabs);
 
-            return (
-                <div>
-                    <div className="mb-6 flex items-end justify-between">
-                        <div>
-                            <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none">Deals</h2>
-                            <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-1">Gear discounts & sponsor connections</p>
-                        </div>
-                    </div>
+    if(dealsSubTab==='gear') {
+        const visible = currentUser ? filteredGear : filteredGear.slice(0,5);
+        const grid = h('div',{class:'grid-4'});
+        visible.forEach((item,i) => {
+            if(i===3) grid.appendChild(adCard());
+            grid.appendChild(gearCard(item,i));
+        });
+        if(!currentUser && filteredGear.length>5) grid.appendChild(registerCTA('Unlock All Discounts','20+ combat gear deals'));
+        main.appendChild(grid);
+    } else {
+        // Sponsorship blueprint banner
+        const banner = document.createElement('a');
+        banner.href = 'https://restround.co/blogs/combat-gear-skin-spray/the-sponsorship-blueprint-how-to-fund-your-fight-career-in-2026';
+        banner.target = '_blank';
+        banner.style.cssText = 'display:block;background:#d7df22;padding:2.5rem;border-radius:2.5rem;color:black;margin-bottom:32px;text-decoration:none;position:relative;overflow:hidden;';
+        banner.innerHTML = `
+            <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.4em;margin:0 0 12px;opacity:.6;">Free Guide</p>
+            <h3 style="font-size:1.75rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.03em;margin:0 0 12px;line-height:1;">The Sponsorship Blueprint</h3>
+            <p style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.15em;opacity:.7;font-style:italic;margin:0;">How to Fund Your Fight Career in 2026 → Read Now</p>`;
+        main.appendChild(banner);
 
-                    {/* Sub-tabs */}
-                    <div className="flex gap-2 mb-8">
-                        {[
-                            { id: 'gear', label: 'Gear Discounts', icon: 'shopping-bag' },
-                            { id: 'sponsors', label: 'Get Sponsored', icon: 'target' }
-                        ].map(t => (
-                            <button key={t.id} onClick={() => setDealsTab(t.id)}
-                                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${dealsTab === t.id ? 'bg-black text-[#d7df22] shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                                <Icon name={t.icon} size={12} />{t.label}
-                            </button>
-                        ))}
-                    </div>
+        const visible = currentUser ? filteredSponsors : filteredSponsors.slice(0,5);
+        const grid = h('div',{class:'grid-4'});
+        visible.forEach((s,i) => {
+            if(i===3) grid.appendChild(adCard());
+            grid.appendChild(sponsorCard(s,i));
+        });
+        if(!currentUser && filteredSponsors.length>5) grid.appendChild(registerCTA('Unlock Sponsors','Connect with brands looking for fighters'));
+        main.appendChild(grid);
+    }
+}
 
-                    {/* GEAR */}
-                    {dealsTab === 'gear' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {(user ? gear : gear.slice(0, 5)).map((item, i) => {
-                                const els = [];
-                                if (i === 3) els.push(<AdCard key="ad" />);
-                                els.push(
-                                    <div key={i} className="bg-white border-2 border-gray-100 p-7 rounded-[2rem] shadow-lg flex flex-col hover:border-black transition-all">
-                                        <div className="flex justify-between items-start mb-5">
-                                            <span className="bg-[#d7df22] text-black px-3 py-1 rounded-full text-[9px] font-black uppercase">-{item.discount_amount}</span>
-                                        </div>
-                                        <h3 className="text-xl font-black italic uppercase leading-none mb-1">{item.brand_name || "Partner"}</h3>
-                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest italic mb-6">{item.product_name}</p>
-                                        <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-200 flex justify-between items-center mb-6 font-mono font-black text-lg">
-                                            <span className="text-black">{item.discount_code}</span>
-                                            <CopyButton text={item.discount_code} showText={true} />
-                                        </div>
-                                        <button onClick={() => window.open(item.affiliate_url)} className="w-full bg-black text-[#d7df22] py-3 rounded-xl font-black uppercase italic tracking-widest text-[9px] shadow-md hover:bg-[#d7df22] hover:text-black transition-colors mt-auto">Get Deal →</button>
-                                    </div>
-                                );
-                                return els;
-                            })}
-                            {!user && gear.length > 5 && <RegisterCTA title="Unlock All Discounts" text="20+ combat gear deals" onSignUp={onSignUp} />}
-                        </div>
-                    )}
+function gearCard(item, i) {
+    const div = document.createElement('div');
+    div.style.cssText = 'background:white;border:2px solid #f3f4f6;padding:1.75rem;border-radius:2rem;box-shadow:0 10px 25px rgba(0,0,0,.06);display:flex;flex-direction:column;transition:border-color .2s;';
+    div.onmouseenter=()=>div.style.borderColor='black';
+    div.onmouseleave=()=>div.style.borderColor='#f3f4f6';
+    div.innerHTML = `
+        <span style="background:#d7df22;color:black;font-size:9px;font-weight:900;text-transform:uppercase;padding:4px 12px;border-radius:9999px;display:inline-block;margin-bottom:20px;align-self:flex-start;">-${item.discount_amount||''}</span>
+        <h3 style="font-size:1.25rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.03em;margin:0 0 4px;line-height:1;">${item.brand_name||'Partner'}</h3>
+        <p style="font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;font-style:italic;margin:0 0 20px;">${item.product_name||''}</p>
+        <div style="background:#f9fafb;padding:16px;border-radius:.75rem;border:2px dashed #e5e7eb;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <span style="font-family:monospace;font-weight:900;font-size:1.1rem;">${item.discount_code||''}</span>
+            <button onclick="copyText('${item.discount_code||''}')" style="background:#f3f4f6;border:none;border-radius:.5rem;padding:6px 10px;cursor:pointer;font-family:'Montserrat',sans-serif;font-size:8px;font-weight:900;text-transform:uppercase;transition:background .2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">Copy</button>
+        </div>
+        <button onclick="${item.affiliate_url?`window.open('${item.affiliate_url}')`:''}" class="btn btn-dark" style="width:100%;padding:12px;border-radius:.75rem;font-size:9px;margin-top:auto;">Get Deal →</button>`;
+    return div;
+}
 
-                    {/* SPONSORS */}
-                    {dealsTab === 'sponsors' && (
-                        <div>
-                            <a href="https://restround.co/blogs/combat-gear-skin-spray/the-sponsorship-blueprint-how-to-fund-your-fight-career-in-2026" target="_blank"
-                                className="block bg-[#d7df22] p-10 rounded-[2.5rem] text-black shadow-xl mb-8 relative overflow-hidden group hover:shadow-2xl transition-shadow">
-                                <div className="absolute right-[-5%] top-[-10%] opacity-10 rotate-12 pointer-events-none group-hover:scale-110 transition-transform">
-                                    <Icon name="target" size={200} />
-                                </div>
-                                <p className="text-[9px] font-black uppercase tracking-[0.4em] mb-3 opacity-60">Free Guide</p>
-                                <h3 className="text-3xl font-black italic uppercase mb-3 tracking-tighter leading-none">The Sponsorship Blueprint</h3>
-                                <p className="font-bold text-sm uppercase tracking-widest opacity-70 italic">How to Fund Your Fight Career in 2026 → Read Now</p>
-                            </a>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {(user ? sponsors : sponsors.slice(0, 5)).map((s, i) => {
-                                    const els = [];
-                                    if (i === 3) els.push(<AdCard key="ad" />);
-                                    els.push(
-                                        <div key={s.id} className="bg-white border-2 border-gray-100 p-7 rounded-[2rem] shadow-lg flex flex-col hover:border-black transition-all">
-                                            <h3 className="text-xl font-black italic uppercase mb-2 leading-none">{s.brand_name}</h3>
-                                            <span className="bg-black text-[#d7df22] text-[7px] font-black px-3 py-1 rounded-full uppercase tracking-widest italic inline-block mb-6 self-start">{s.focus || 'Partner'}</span>
-                                            <div className="space-y-3 mb-6 flex-1">
-                                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                                    <p className="text-[8px] font-black text-gray-400 uppercase mb-1.5 tracking-widest">Requirement</p>
-                                                    <p className="text-[11px] font-bold leading-relaxed">{s.requirement || "Active status required."}</p>
-                                                </div>
-                                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                                    <p className="text-[8px] font-black text-gray-400 uppercase mb-1.5 tracking-widest">What You Get</p>
-                                                    <p className="text-[11px] font-bold leading-relaxed">{s.offer || "Product kit + commission"}</p>
-                                                </div>
-                                            </div>
-                                            {!revealedSponsors.has(s.id) ? (
-                                                <button onClick={() => toggleSponsor(s.id)} className="w-full py-3 rounded-xl font-black uppercase italic tracking-widest text-[9px] bg-black text-[#d7df22] hover:bg-[#d7df22] hover:text-black transition-all shadow-md">Get Contact →</button>
-                                            ) : (
-                                                <div className="flex items-center gap-2 bg-black text-white p-3 rounded-xl animate-fade-in">
-                                                    <span className="text-[9px] font-black italic flex-1 truncate">{s.email || 'team.restround@gmail.com'}</span>
-                                                    <CopyButton text={s.email || 'team.restround@gmail.com'} size={11} showText />
-                                                    <button onClick={() => toggleSponsor(s.id)} className="text-white/30 hover:text-red-400"><Icon name="x" size={12}/></button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                    return els;
-                                })}
-                                {!user && sponsors.length > 5 && <RegisterCTA title="Unlock Sponsors" text="Connect with brands looking for fighters" onSignUp={onSignUp} />}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
+function sponsorCard(s, i) {
+    const div = document.createElement('div');
+    div.style.cssText = 'background:white;border:2px solid #f3f4f6;padding:1.75rem;border-radius:2rem;box-shadow:0 10px 25px rgba(0,0,0,.06);display:flex;flex-direction:column;transition:border-color .2s;';
+    div.onmouseenter=()=>div.style.borderColor='black';
+    div.onmouseleave=()=>div.style.borderColor='#f3f4f6';
 
-        // ============================================================
-        // GYM MODAL
-        // ============================================================
-        const GymModal = ({ gym, profiles, onClose }) => (
-            <div className="fixed inset-0 z-[400] flex items-end md:items-center justify-center p-0 md:p-8">
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-                <div className="relative bg-white w-full max-w-4xl h-[92vh] md:h-auto md:max-h-[88vh] rounded-t-[3rem] md:rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row animate-modal">
-                    <button onClick={onClose} className="absolute top-5 right-5 bg-black text-[#d7df22] p-2 rounded-full z-10 hover:scale-110 transition-transform">
-                        <Icon name="x" size={18} />
+    const revealId = 'sponsor-'+s.id;
+    div.innerHTML = `
+        <h3 style="font-size:1.25rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.03em;margin:0 0 8px;line-height:1;">${s.brand_name||''}</h3>
+        <span style="background:black;color:#d7df22;font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;font-style:italic;padding:3px 12px;border-radius:9999px;display:inline-block;margin-bottom:20px;align-self:flex-start;">${s.focus||'Partner'}</span>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;flex:1;">
+            <div style="background:#f9fafb;padding:14px;border-radius:.75rem;border:1px solid #f3f4f6;">
+                <p style="font-size:8px;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;margin:0 0 6px;">Requirement</p>
+                <p style="font-size:11px;font-weight:700;line-height:1.5;margin:0;">${s.requirement||'Active status required.'}</p>
+            </div>
+            <div style="background:#f9fafb;padding:14px;border-radius:.75rem;border:1px solid #f3f4f6;">
+                <p style="font-size:8px;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;margin:0 0 6px;">What You Get</p>
+                <p style="font-size:11px;font-weight:700;line-height:1.5;margin:0;">${s.offer||'Product kit + commission'}</p>
+            </div>
+        </div>
+        <div id="${revealId}"></div>`;
+
+    setTimeout(() => renderSponsorAction(s, div.querySelector('#'+revealId)), 0);
+    return div;
+}
+
+function renderSponsorAction(s, container) {
+    if(!container) return;
+    container.innerHTML = '';
+    if(revealedSponsors.has(s.id)) {
+        const email = s.email||'team.restround@gmail.com';
+        container.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;background:black;color:white;padding:10px 12px;border-radius:.75rem;" class="animate-fade-in">
+                <span style="font-size:9px;font-weight:900;font-style:italic;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${email}</span>
+                <button onclick="copyText('${email}')" style="background:none;border:none;cursor:pointer;color:#9ca3af;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+                <button onclick="revealedSponsors.delete('${s.id}');renderView();" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.3);">✕</button>
+            </div>`;
+    } else {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-dark';
+        btn.style.cssText = 'width:100%;padding:12px;border-radius:.75rem;font-size:9px;';
+        btn.textContent = 'Get Contact →';
+        btn.onclick = () => { revealedSponsors.add(s.id); renderSponsorAction(s, container); };
+        container.appendChild(btn);
+    }
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────
+let authIsLogin = true;
+function openAuthModal() {
+    authIsLogin = true;
+    renderAuthForm();
+    openModal('auth-modal');
+}
+
+function renderAuthForm() {
+    const c = el('auth-form-container');
+    c.innerHTML = `
+        <h2 style="font-size:1.875rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.05em;margin:0 0 4px;">${authIsLogin?'Login':'Join Fighter List'}</h2>
+        <p style="font-size:9px;font-weight:900;text-transform:uppercase;color:#9ca3af;letter-spacing:.2em;margin:0 0 32px;">${authIsLogin?'Access your fighter profile':'Create your fighter profile free'}</p>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+            ${!authIsLogin?`<div><p style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#9ca3af;margin:0 0 6px;">Full Name</p><input id="auth-name" type="text" placeholder="Alex Volkanovski" class="input-field"></div>`:''}
+            <div><p style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#9ca3af;margin:0 0 6px;">Email</p><input id="auth-email" type="email" placeholder="athlete@fighterlist.com" class="input-field"></div>
+            <div><p style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#9ca3af;margin:0 0 6px;">Password</p><input id="auth-password" type="password" placeholder="••••••••" class="input-field"></div>
+            ${!authIsLogin?`<div><p style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#9ca3af;margin:0 0 6px;">Confirm Password</p><input id="auth-confirm" type="password" placeholder="••••••••" class="input-field"></div>`:''}
+            <p id="auth-error" style="font-size:10px;font-weight:900;text-transform:uppercase;color:#ef4444;letter-spacing:.05em;margin:0;display:none;"></p>
+            <button onclick="submitAuth()" class="btn btn-dark" style="width:100%;padding:18px;border-radius:.75rem;font-size:11px;">${authIsLogin?'Enter →':'Create Profile →'}</button>
+            <p style="text-align:center;font-size:9px;font-weight:900;text-transform:uppercase;color:#9ca3af;cursor:pointer;margin:0;" onclick="authIsLogin=!authIsLogin;renderAuthForm();">${authIsLogin?'No account? Sign up free →':'Already a member? Login →'}</p>
+        </div>`;
+}
+
+async function submitAuth() {
+    const email = el('auth-email')?.value;
+    const password = el('auth-password')?.value;
+    const errEl = el('auth-error');
+    errEl.style.display='none';
+
+    if(authIsLogin) {
+        const {error} = await sb.auth.signInWithPassword({email, password});
+        if(error) { errEl.textContent=error.message; errEl.style.display='block'; }
+        else { closeModal('auth-modal'); }
+    } else {
+        const fullName = el('auth-name')?.value;
+        const confirm = el('auth-confirm')?.value;
+        if(password!==confirm) { errEl.textContent='Passwords do not match.'; errEl.style.display='block'; return; }
+        const {data, error} = await sb.auth.signUp({email, password, options:{data:{full_name:fullName}}});
+        if(error) { errEl.textContent=error.message; errEl.style.display='block'; }
+        else {
+            if(data.user) await sb.from('profiles').insert([{id:data.user.id, full_name:fullName||'Athlete', username:email.split('@')[0], home_gym:'Not Set'}]);
+            errEl.textContent='Check your email to confirm your account.';
+            errEl.style.cssText='font-size:10px;font-weight:900;text-transform:uppercase;color:#16a34a;letter-spacing:.05em;';
+            errEl.style.display='block';
+            authIsLogin=true; renderAuthForm();
+        }
+    }
+}
+
+// ─── PROFILE PANEL ────────────────────────────────────────────
+function renderProfilePanel() {
+    currentView = '__profile__';
+    ['gyms','fighters','fights','deals'].forEach(t => el('tab-'+t).className = 'tab-btn tab-inactive');
+    el('filters').style.display = 'none';
+    const main = el('main');
+    main.innerHTML = '';
+
+    const myProfile = profiles.find(p=>p.id===currentUser.id)||{};
+    let editing = false;
+    let fields = {...myProfile};
+
+    function render() {
+        main.innerHTML = '';
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'max-width:28rem;margin:0 auto;';
+        wrap.className = 'animate-slide-up';
+
+        wrap.innerHTML = `
+            <div style="background:white;border-radius:2.5rem;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.1);border:1px solid #f3f4f6;">
+                <div style="background:black;padding:2.5rem;text-align:center;position:relative;">
+                    <button onclick="sb.auth.signOut()" style="position:absolute;top:20px;right:20px;background:none;border:none;cursor:pointer;color:#6b7280;transition:color .2s;" onmouseover="this.style.color='#d7df22'" onmouseout="this.style.color='#6b7280'">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     </button>
-                    <div className="md:w-2/5 relative h-56 md:h-auto shrink-0 bg-gray-100 overflow-hidden">
-                        <img src={gym.image_url || "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?auto=format&fit=crop&q=80&w=600"} className="w-full h-full object-cover" alt={gym.name} />
-                    </div>
-                    <div className="md:w-3/5 p-8 md:p-10 overflow-y-auto no-scrollbar space-y-8 text-left">
-                        <div>
-                            <div className="flex items-center gap-1.5 text-gray-400 font-bold uppercase text-[9px] tracking-widest mb-2 italic">
-                                <Icon name="map-pin" size={12} className="text-red-500"/>{gym.city_country || gym.city || gym.location}
-                            </div>
-                            <h2 className="text-2xl font-black italic uppercase tracking-tighter leading-none">{gym.name}</h2>
-                        </div>
-
-                        {/* Who's here */}
-                        <div className="bg-gray-50 p-6 rounded-2xl grid grid-cols-3 gap-1 text-center border border-gray-100">
-                            <div className="space-y-2">
-                                <p className="text-[8px] font-black text-gray-400 uppercase italic">Here Now</p>
-                                <AvatarStack gymId={gym.id} profiles={profiles} />
-                            </div>
-                            <div className="space-y-2 border-x border-gray-200">
-                                <p className="text-[8px] font-black text-gray-400 uppercase italic">Visit Soon</p>
-                                <span className="text-xl font-black">—</span>
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-[8px] font-black text-gray-400 uppercase italic">Was Here</p>
-                                <span className="text-xl font-black">—</span>
-                            </div>
-                        </div>
-
-                        {/* Metrics */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <MetricBar label="Hygiene" value={gym.hygiene_score} icon="shield-check" />
-                            <MetricBar label="Food Safety" value={gym.food_safety} icon="utensils" />
-                            <MetricBar label="English" value={gym.english_score} icon="languages" />
-                            <MetricBar label="Safe for Women" value={gym.safe_for_women} icon="shield" />
-                        </div>
-
-                        <a href={gym.website} target="_blank"
-                            className="block w-full bg-black text-[#d7df22] py-4 rounded-xl font-black uppercase italic tracking-[0.2em] text-[10px] text-center hover:bg-[#d7df22] hover:text-black transition-colors shadow-lg">
-                            Visit Gym Website →
-                        </a>
-                    </div>
+                    ${myProfile.avatar_url?`<img src="${myProfile.avatar_url}" style="width:96px;height:96px;border-radius:9999px;border:4px solid #d7df22;margin:0 auto 20px;display:block;object-fit:cover;" alt="${myProfile.full_name}">`:
+                    `<div style="width:96px;height:96px;border-radius:9999px;border:4px solid #d7df22;background:#111;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;"><span style="color:#d7df22;font-size:1.75rem;font-weight:900;font-style:italic;">${getInitials(myProfile.full_name)}</span></div>`}
+                    <h2 style="font-size:1.5rem;font-weight:900;font-style:italic;text-transform:uppercase;color:white;letter-spacing:-.03em;margin:0;">${myProfile.full_name||'Athlete'}</h2>
                 </div>
-            </div>
-        );
+                <div style="padding:2rem;" id="profile-body"></div>
+            </div>`;
 
-        // ============================================================
-        // FIGHTER MODAL
-        // ============================================================
-        const FighterModal = ({ fighter, gyms, onClose }) => {
-            const homeGym = gyms.find(g => g.name === fighter.home_gym);
-            const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) || '?';
+        const body = wrap.querySelector('#profile-body');
 
-            return (
-                <div className="fixed inset-0 z-[400] flex items-end md:items-center justify-center p-0 md:p-8">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-                    <div className="relative bg-white w-full max-w-lg rounded-t-[3rem] md:rounded-[2.5rem] overflow-hidden shadow-2xl animate-modal">
-                        <button onClick={onClose} className="absolute top-5 right-5 bg-black text-[#d7df22] p-2 rounded-full z-10 hover:scale-110 transition-transform">
-                            <Icon name="x" size={18} />
-                        </button>
-                        {/* Header */}
-                        <div className="bg-black p-10 text-center">
-                            {fighter.avatar_url ? (
-                                <img src={fighter.avatar_url} className="w-28 h-28 rounded-full border-4 border-[#d7df22] mx-auto mb-5 object-cover" alt={fighter.full_name} />
-                            ) : (
-                                <div className="w-28 h-28 rounded-full border-4 border-[#d7df22] mx-auto mb-5 bg-gray-900 flex items-center justify-center">
-                                    <span className="text-[#d7df22] text-3xl font-black italic">{getInitials(fighter.full_name)}</span>
-                                </div>
-                            )}
-                            <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter leading-none">{fighter.full_name}</h2>
-                            {fighter.username && (
-                                <a href={`https://instagram.com/${fighter.username}`} target="_blank"
-                                    className="inline-flex items-center gap-2 mt-3 text-[#d7df22] text-[9px] font-black uppercase tracking-[0.3em] bg-white/10 px-4 py-2 rounded-full hover:bg-[#d7df22] hover:text-black transition-all">
-                                    <InstagramIcon size={12} /> @{fighter.username}
-                                </a>
-                            )}
-                        </div>
-                        {/* Body */}
-                        <div className="p-8 space-y-6 text-left overflow-y-auto no-scrollbar max-h-[50vh]">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-gray-50 p-4 rounded-xl">
-                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Location</p>
-                                    <p className="font-black italic uppercase text-sm">{fighter.city || '—'}</p>
-                                </div>
-                                <div className="bg-gray-50 p-4 rounded-xl">
-                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Weight Class</p>
-                                    <p className="font-black italic uppercase text-sm">{fighter.weight_class || '—'}</p>
-                                </div>
-                            </div>
-                            <div className="bg-gray-50 p-4 rounded-xl">
-                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-2">Disciplines</p>
-                                <div className="flex flex-wrap gap-1">
-                                    {(fighter.disciplines || '').split(',').map(d => d.trim()).filter(Boolean).map(d => (
-                                        <span key={d} className="bg-black text-[#d7df22] text-[7px] font-black px-3 py-1 rounded-full uppercase tracking-widest">{d}</span>
-                                    ))}
-                                </div>
-                            </div>
-                            {fighter.open_to && (
-                                <div className="bg-[#d7df22]/10 border border-[#d7df22]/30 p-4 rounded-xl">
-                                    <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2">Open To</p>
-                                    <div className="flex flex-wrap gap-1">
-                                        {fighter.open_to.split(',').map(o => o.trim()).filter(Boolean).map(o => (
-                                            <span key={o} className="bg-[#d7df22] text-black text-[7px] font-black px-3 py-1 rounded-full uppercase tracking-widest">{o}</span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            {fighter.home_gym && (
-                                <div className="bg-gray-50 p-4 rounded-xl">
-                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Home Gym</p>
-                                    <p className="font-black italic uppercase text-sm">{fighter.home_gym}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // ============================================================
-        // PROFILE PANEL
-        // ============================================================
-        const ProfilePanel = ({ myProfile, user, gyms, isEditing, editFields, setEditFields, onEdit, onSave, onCancel, onSignOut }) => {
-            const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) || '?';
-            const field = (key, label, placeholder, type = "text") => (
+        if(editing) {
+            const fieldHtml = (key, label, placeholder) => `
                 <div>
-                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">{label}</p>
-                    <input type={type} value={editFields[key] || ''} onChange={e => setEditFields({...editFields, [key]: e.target.value})}
-                        placeholder={placeholder} className="w-full bg-gray-50 border-2 border-transparent focus:border-black p-3.5 rounded-xl font-bold outline-none transition-all text-sm" />
-                </div>
-            );
-
-            return (
-                <div className="max-w-xl mx-auto animate-slide-up">
-                    <div className="bg-white rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100">
-                        {/* Header */}
-                        <div className="bg-black p-10 text-center relative">
-                            <button onClick={onSignOut} className="absolute top-5 right-5 text-gray-500 hover:text-[#d7df22] transition-colors">
-                                <Icon name="log-out" size={18} />
-                            </button>
-                            {myProfile.avatar_url ? (
-                                <img src={myProfile.avatar_url} className="w-24 h-24 rounded-full border-4 border-[#d7df22] mx-auto mb-5 object-cover" alt={myProfile.full_name} />
-                            ) : (
-                                <div className="w-24 h-24 rounded-full border-4 border-[#d7df22] mx-auto mb-5 bg-gray-900 flex items-center justify-center">
-                                    <span className="text-[#d7df22] text-2xl font-black italic">{getInitials(myProfile.full_name)}</span>
-                                </div>
-                            )}
-                            <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter">{myProfile.full_name || 'Athlete'}</h2>
-                            {myProfile.username && (
-                                <a href={`https://instagram.com/${myProfile.username}`} target="_blank"
-                                    className="inline-flex items-center gap-2 mt-2 text-[#d7df22] text-[9px] font-black uppercase tracking-widest bg-white/10 px-4 py-1.5 rounded-full hover:bg-[#d7df22] hover:text-black transition-all">
-                                    <InstagramIcon size={11} /> @{myProfile.username}
-                                </a>
-                            )}
-                        </div>
-                        {/* Body */}
-                        <div className="p-8 space-y-5">
-                            {isEditing ? (
-                                <>
-                                    {field('full_name', 'Full Name', 'Your name')}
-                                    {field('username', 'Instagram Handle', '@yourhandle')}
-                                    {field('city', 'City / Location', 'Phuket, Thailand')}
-                                    {field('weight_class', 'Weight Class', 'Featherweight')}
-                                    {field('disciplines', 'Disciplines', 'MMA, Muay Thai, BJJ (comma separated)')}
-                                    {field('open_to', 'Open To', 'Sparring, Fights, Sponsors')}
-                                    {field('home_gym', 'Home Gym', 'Bangtao MMA')}
-                                    {field('current_gym', 'Here Now (gym)', 'Tiger Muay Thai')}
-                                    {field('planned_gyms', 'Visiting Soon', 'AKA Thailand')}
-                                    <div className="flex gap-3 pt-2">
-                                        <button onClick={onSave} className="flex-1 bg-black text-[#d7df22] py-4 rounded-xl font-black uppercase italic tracking-widest text-[9px] hover:bg-[#d7df22] hover:text-black transition-colors shadow-md">Save Profile</button>
-                                        <button onClick={onCancel} className="px-6 bg-gray-100 text-gray-500 rounded-xl font-black uppercase text-[9px]">Cancel</button>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-gray-50 p-4 rounded-xl">
-                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Location</p>
-                                            <p className="font-black italic uppercase text-sm">{myProfile.city || '—'}</p>
-                                        </div>
-                                        <div className="bg-gray-50 p-4 rounded-xl">
-                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Weight Class</p>
-                                            <p className="font-black italic uppercase text-sm">{myProfile.weight_class || '—'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="bg-gray-50 p-4 rounded-xl">
-                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-2">Disciplines</p>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {(myProfile.disciplines || '').split(',').filter(Boolean).map(d => (
-                                                <span key={d} className="bg-black text-[#d7df22] text-[7px] font-black px-3 py-1 rounded-full uppercase tracking-widest">{d.trim()}</span>
-                                            ))}
-                                            {!myProfile.disciplines && <span className="text-gray-400 text-xs">Not set</span>}
-                                        </div>
-                                    </div>
-                                    <div className="bg-gray-50 p-4 rounded-xl">
-                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Home Gym</p>
-                                        <p className="font-black italic uppercase text-sm">{myProfile.home_gym || '—'}</p>
-                                    </div>
-                                    <div className="bg-gray-50 p-4 rounded-xl">
-                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Here Now</p>
-                                        <p className="font-black italic uppercase text-sm">{myProfile.current_gym || '—'}</p>
-                                    </div>
-                                    {myProfile.open_to && (
-                                        <div className="bg-[#d7df22]/10 border border-[#d7df22]/30 p-4 rounded-xl">
-                                            <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2">Open To</p>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {myProfile.open_to.split(',').map(o => o.trim()).filter(Boolean).map(o => (
-                                                    <span key={o} className="bg-[#d7df22] text-black text-[7px] font-black px-3 py-1 rounded-full uppercase">{o}</span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                    <button onClick={onEdit} className="w-full bg-black text-white py-4 rounded-xl font-black uppercase italic text-[9px] tracking-widest flex items-center justify-center gap-2 hover:text-[#d7df22] transition-colors shadow-md">
-                                        <Icon name="settings" size={15} /> Edit My Profile
-                                    </button>
-                                </>
-                            )}
-                        </div>
+                    <p style="font-size:8px;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;margin:0 0 6px;">${label}</p>
+                    <input type="text" value="${fields[key]||''}" placeholder="${placeholder}" class="input-field" oninput="fields['${key}']=this.value" data-field="${key}">
+                </div>`;
+            body.innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                    ${fieldHtml('full_name','Full Name','Your name')}
+                    ${fieldHtml('username','Instagram Handle','@yourhandle')}
+                    ${fieldHtml('city','City / Location','Phuket, Thailand')}
+                    ${fieldHtml('weight_class','Weight Class','Featherweight')}
+                    ${fieldHtml('disciplines','Disciplines','MMA, Muay Thai, BJJ')}
+                    ${fieldHtml('open_to','Open To','Sparring, Fights, Sponsors')}
+                    ${fieldHtml('home_gym','Home Gym','Bangtao MMA')}
+                    <div style="display:flex;gap:12px;margin-top:8px;">
+                        <button onclick="saveProfile()" class="btn btn-dark" style="flex:1;padding:16px;border-radius:.75rem;font-size:9px;">Save Profile</button>
+                        <button onclick="editing=false;render();" style="padding:16px 20px;background:#f3f4f6;color:#6b7280;border:none;border-radius:.75rem;font-weight:900;font-size:9px;text-transform:uppercase;cursor:pointer;">Cancel</button>
                     </div>
-                </div>
-            );
-        };
-
-        // ============================================================
-        // AUTH MODAL
-        // ============================================================
-        const AuthModal = ({ isLogin, setIsLogin, email, setEmail, password, setPassword, confirmPassword, setConfirmPassword, fullName, setFullName, authError, setAuthError, onSubmit, onClose }) => (
-            <div className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center p-0 sm:p-8">
-                <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-                <div className="relative bg-white w-full max-w-md rounded-t-[3rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden animate-modal">
-                    <button onClick={onClose} className="absolute top-5 right-5 bg-gray-100 text-gray-500 p-2 rounded-full hover:bg-black hover:text-[#d7df22] transition-all">
-                        <Icon name="x" size={16} />
-                    </button>
-                    <div className="p-10">
-                        <h2 className="text-3xl font-black italic uppercase mb-1 tracking-tighter text-black">{isLogin ? 'Login' : 'Join Fighter List'}</h2>
-                        <p className="text-[9px] font-black uppercase text-gray-400 tracking-[0.3em] mb-8">{isLogin ? 'Access your fighter profile' : 'Create your fighter profile free'}</p>
-                        <form onSubmit={onSubmit} className="space-y-4">
-                            {!isLogin && (
-                                <div>
-                                    <p className="text-[8px] font-black text-gray-400 uppercase mb-1.5 ml-1 tracking-widest">Full Name</p>
-                                    <input type="text" placeholder="Alex Volkanovski" value={fullName} onChange={e => setFullName(e.target.value)} className="w-full bg-gray-50 p-4 rounded-xl font-bold outline-none border-2 border-transparent focus:border-black transition-all" required />
-                                </div>
-                            )}
-                            <div>
-                                <p className="text-[8px] font-black text-gray-400 uppercase mb-1.5 ml-1 tracking-widest">Email</p>
-                                <input type="email" placeholder="athlete@fighterlist.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-gray-50 p-4 rounded-xl font-bold outline-none border-2 border-transparent focus:border-black transition-all" required />
-                            </div>
-                            <div>
-                                <p className="text-[8px] font-black text-gray-400 uppercase mb-1.5 ml-1 tracking-widest">Password</p>
-                                <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-xl font-bold outline-none border-2 border-transparent focus:border-black transition-all" required />
-                            </div>
-                            {!isLogin && (
-                                <div>
-                                    <p className="text-[8px] font-black text-gray-400 uppercase mb-1.5 ml-1 tracking-widest">Confirm Password</p>
-                                    <input type="password" placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-xl font-bold outline-none border-2 border-transparent focus:border-black transition-all" required />
-                                </div>
-                            )}
-                            {authError && <p className="text-[10px] font-black uppercase text-red-500 tracking-tight">{authError}</p>}
-                            <button type="submit" className="w-full bg-black text-[#d7df22] py-5 rounded-xl font-black uppercase italic tracking-widest shadow-xl active:scale-95 transition-all hover:bg-[#d7df22] hover:text-black">
-                                {isLogin ? 'Enter →' : 'Create Profile →'}
-                            </button>
-                            <p className="text-center text-[9px] font-black uppercase text-gray-400 cursor-pointer pt-1 hover:text-black transition-colors" onClick={() => { setIsLogin(!isLogin); setAuthError(""); }}>
-                                {isLogin ? "No account? Sign up free →" : "Already a member? Login →"}
-                            </p>
-                        </form>
+                </div>`;
+            // Bind fields
+            body.querySelectorAll('.input-field').forEach(inp => {
+                inp.addEventListener('input', () => { fields[inp.dataset.field] = inp.value; });
+            });
+        } else {
+            body.innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div style="background:#f9fafb;padding:14px;border-radius:.75rem;"><p style="font-size:8px;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;margin:0 0 4px;">Location</p><p style="font-weight:900;font-style:italic;text-transform:uppercase;font-size:14px;margin:0;">${myProfile.city||'—'}</p></div>
+                        <div style="background:#f9fafb;padding:14px;border-radius:.75rem;"><p style="font-size:8px;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;margin:0 0 4px;">Weight Class</p><p style="font-weight:900;font-style:italic;text-transform:uppercase;font-size:14px;margin:0;">${myProfile.weight_class||'—'}</p></div>
                     </div>
-                </div>
-            </div>
-        );
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
+                    <div style="background:#f9fafb;padding:14px;border-radius:.75rem;">
+                        <p style="font-size:8px;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;margin:0 0 8px;">Home Gym</p>
